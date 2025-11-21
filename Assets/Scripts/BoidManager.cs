@@ -23,11 +23,14 @@ public class BoidManager : MonoBehaviour
 
     [Header("突撃設定")]
     public Transform player;                // 突撃先（プレイヤー）
-    public float chargeSpeed = 5f;          // 突撃中のスピード
+    //public float chargeSpeed = 5f;          // 突撃中のスピード
     public float chargeDelay = 3f;          // 指名されてから何秒後に突撃開始するか
     public float maxChargeDuration = 2f;    // 突撃を続ける最大時間（これを超えたら戻る）
     public float chargeInterval = 5f;       // 何秒ごとに新しい突撃役を選ぶか
     public int maxConcurrentChargers = 3;   // 同時に突撃状態になれる最大人数
+	public float chargeAcceleration = 10f;  // 突撃時の加速度
+	public float maxChargeSpeed = 8f;       // 突撃時の最大速度
+
 
     private List<Boid> boids = new List<Boid>();
     private float chargeIntervalTimer = 0f; // 突撃役選出用タイマー
@@ -104,40 +107,58 @@ public class BoidManager : MonoBehaviour
 
         // ===== 各Boidの更新 =====
         for (int i = 0; i < boids.Count; i++)
-        {
-            Boid boid = boids[i];
-            if (boid == null) continue;
+		{
+    		Boid boid = boids[i];
+    		if (boid == null) continue;
 
-            // 突撃関連のタイマー更新と自動復帰チェック
-            if (boid.isCharger)
-            {
-                boid.chargeTimer += Time.deltaTime;
+    		// 突撃関連のタイマー更新と自動復帰チェック
+    		if (boid.isCharger)
+    		{
+        		boid.chargeTimer += Time.deltaTime;
 
-                // 最大突撃時間を過ぎたら群れに戻す
-                float chargeEndTime = boid.chargeDelay + boid.maxChargeDuration;
-                if (boid.chargeTimer >= chargeEndTime)
-                {
-                    boid.ResetCharge();
-                }
-            }
+        		// 最大突撃時間を過ぎたら群れに戻す
+        		float chargeEndTime = boid.chargeDelay + boid.maxChargeDuration;
+        		if (boid.chargeTimer >= chargeEndTime)
+        		{
+            		boid.ResetCharge();
+        		}
+    		}
 
-            // ① 突撃中ならプレイヤー追尾
-            if (boid.IsCharging)
-            {
-                if (player != null)
-                {
-                    Vector2 dir = ((Vector2)player.position - (Vector2)boid.transform.position).normalized;
-                    boid.velocity = dir * chargeSpeed;
-                    boid.transform.position += (Vector3)(boid.velocity * Time.deltaTime);
-                }
-                // 群衆ルールは適用しない
-                continue;
-            }
+    		// ① 突撃中ならプレイヤー追尾（加速度付き）
+    		if (boid.IsCharging)
+    		{
+        		if (player != null)
+        		{
+            		// プレイヤー方向
+            		Vector2 dir = ((Vector2)player.position - (Vector2)boid.transform.position);
 
-            // ② まだ突撃前 or 突撃役じゃない → 普通の群衆ルール
-            ApplyFlockBehavior(boid);
-        }
-    }
+            		if (dir.sqrMagnitude > 0.0001f)
+            		{
+                		dir = dir.normalized;
+
+                		// 加速度を加える
+                		boid.velocity += dir * chargeAcceleration * Time.deltaTime;
+
+                		// 最大速度でクランプ
+                		float maxSq = maxChargeSpeed * maxChargeSpeed;
+                		if (boid.velocity.sqrMagnitude > maxSq)
+                		{
+                    		boid.velocity = boid.velocity.normalized * maxChargeSpeed;
+                		}
+            		}
+
+            		// 移動
+            		boid.transform.position += (Vector3)(boid.velocity * Time.deltaTime);
+        		}
+
+        		// 群衆ルールは適用しない
+        		continue;
+    		}
+
+    		// ② まだ突撃前 or 突撃役じゃない → 普通の群衆ルール
+    		ApplyFlockBehavior(boid);
+		}
+	}
 
     // 通常の群衆アルゴリズム
     void ApplyFlockBehavior(Boid boid)
