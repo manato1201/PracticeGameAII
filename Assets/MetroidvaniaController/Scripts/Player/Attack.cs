@@ -4,59 +4,191 @@ using UnityEngine;
 
 public class Attack : MonoBehaviour
 {
-	public float dmgValue = 4;
-	public GameObject throwableObject;
-	public Transform attackCheck;
-	private Rigidbody2D m_Rigidbody2D;
-	public Animator animator;
-	public bool canAttack = true;
-	public bool isTimeToCheck = false;
+    public float dmgValue = 1;
+    public GameObject throwableObject;
+    public Transform attackCheck;
+    private Rigidbody2D m_Rigidbody2D;
+    public Animator animator;
+    public bool canAttack = true;
+    public bool isTimeToCheck = false;
 
-	public GameObject cam;
+    public CharacterController2D playerMovement;
 
-	private void Awake()
-	{
-		m_Rigidbody2D = GetComponent<Rigidbody2D>();
-	}
+    [Header("Skill 2 Settings")]
+    public float throwSpeed = 15f;
+    public float skill2DmgValue = 3f;
 
-	// Start is called before the first frame update
-	void Start()
+    [Header("Skill 3 Settings")]
+    public float speedMultiplier = 1.4f;
+    public float jumpMultiplier = 1.4f;
+    public float buffDuration = 8f;
+    private bool isBuffActive = false;
+    private float originalRunSpeed;
+    private float originalJumpForce;
+
+    public GameObject skill1EffectPrefab;
+    public GameObject cam;
+
+    private void Awake()
     {
-        
+        m_Rigidbody2D = GetComponent<Rigidbody2D>();
+        playerMovement = GetComponent<CharacterController2D>();
     }
 
-    // Update is called once per frame
+    void Start()
+    {
+
+    }
+
     void Update()
     {
-		if (Input.GetButtonDown("Attack") && canAttack)
-		{
-			canAttack = false;
-			animator.SetBool("IsAttacking", true);
-			StartCoroutine(AttackCooldown());
-		}
-	}
+        if (Input.GetButtonDown("Attack") && canAttack)
+        {
+            canAttack = false;
+            animator.SetBool("IsAttacking", true);
+            StartCoroutine(AttackCooldown(0.25f, "IsAttacking"));
+        }
 
-	IEnumerator AttackCooldown()
-	{
-		yield return new WaitForSeconds(0.25f);
-		canAttack = true;
-	}
+        if (Input.GetButtonDown("Skill1") && canAttack)
+        {
+            canAttack = false;
+            animator.SetBool("Skill1", true);
+            StartCoroutine(AttackCooldown(0.5f, "Skill1"));
+            Skill1Logic();
+        }
 
-	public void DoDashDamage()
-	{
-		dmgValue = Mathf.Abs(dmgValue);
-		Collider2D[] collidersEnemies = Physics2D.OverlapCircleAll(attackCheck.position, 0.9f);
-		for (int i = 0; i < collidersEnemies.Length; i++)
-		{
-			if (collidersEnemies[i].gameObject.tag == "Enemy")
-			{
-				if (collidersEnemies[i].transform.position.x - transform.position.x < 0)
-				{
-					dmgValue = -dmgValue;
-				}
-				collidersEnemies[i].gameObject.SendMessage("ApplyDamage", dmgValue);
-				cam.GetComponent<CameraFollow>().ShakeCamera();
-			}
-		}
-	}
+        if (Input.GetButtonDown("Skill2") && canAttack)
+        {
+            canAttack = false;
+            animator.SetBool("Skill2", true);
+            StartCoroutine(AttackCooldown(0.7f, "Skill2"));
+            Skill2Logic();
+        }
+
+        if (Input.GetButtonDown("Skill3") && canAttack)
+        {
+            canAttack = false;
+            animator.SetBool("Skill3", true);
+            StartCoroutine(AttackCooldown(1.0f, "Skill3"));
+            Skill3Logic();
+        }
+    }
+
+    IEnumerator AttackCooldown(float duration, string animBoolName)
+    {
+        yield return new WaitForSeconds(duration);
+        animator.SetBool(animBoolName, false);
+        canAttack = true;
+    }
+
+    public void DoDashDamage()
+    {
+        dmgValue = Mathf.Abs(dmgValue);
+        Collider2D[] collidersEnemies = Physics2D.OverlapCircleAll(attackCheck.position, 0.9f);
+        for (int i = 0; i < collidersEnemies.Length; i++)
+        {
+            if (collidersEnemies[i].gameObject.tag == "Enemy")
+            {
+                if (collidersEnemies[i].transform.position.x - transform.position.x < 0)
+                {
+                    dmgValue = -dmgValue;
+                }
+                collidersEnemies[i].gameObject.SendMessage("ApplyDamage", dmgValue);
+                cam.GetComponent<CameraFollow>().ShakeCamera();
+            }
+        }
+    }
+
+    public void Skill1Logic()
+    {
+        Debug.Log("sukiru1aaaaaaaaaaaa");
+        float currentDmg = Mathf.Abs(dmgValue);
+
+        Collider2D[] collidersEnemies = Physics2D.OverlapCircleAll(attackCheck.position, 3.4f);
+
+        for (int i = 0; i < collidersEnemies.Length; i++)
+        {
+            if (collidersEnemies[i].gameObject.tag == "Enemy")
+            {
+                collidersEnemies[i].gameObject.SendMessage("ApplyDamage", currentDmg);
+
+                cam.GetComponent<CameraFollow>().ShakeCamera();
+            }
+        }
+        SpawnSkillEffect(skill1EffectPrefab, transform.position);
+    }
+
+    public void Skill2Logic()
+    {
+        if (throwableObject == null)
+        {
+            Debug.LogWarning("throwableObject が設定されていません。Skill 2 を実行できません。");
+            return;
+        }
+
+        Vector3 spawnPosition = attackCheck.position;
+        GameObject projectile = Instantiate(throwableObject, spawnPosition, Quaternion.identity);
+        Rigidbody2D rb = projectile.GetComponent<Rigidbody2D>();
+
+        if (rb != null)
+        {
+            float direction = transform.localScale.x > 0 ? 1f : -1f;
+            rb.linearVelocity = new Vector2(direction * throwSpeed, 0f);
+
+            Projectile projectileScript = projectile.GetComponent<Projectile>();
+            if (projectileScript != null)
+            {
+                projectileScript.damage = skill2DmgValue;
+            }
+        }
+        else
+        {
+            Debug.LogError("throwableObject に Rigidbody2D がアタッチされていません。");
+        }
+    }
+
+    public void Skill3Logic()
+    {
+        if (isBuffActive)
+        {
+            Debug.Log("加速バフはすでにアクティブです。");
+            return;
+        }
+
+        if (playerMovement == null)
+        {
+            Debug.LogError("CharacterController2D が見つかりません。スキル3を実行できません。");
+            return;
+        }
+
+        StartCoroutine(SpeedJumpBoostBuff(buffDuration));
+    }
+
+    IEnumerator SpeedJumpBoostBuff(float duration)
+    {
+        isBuffActive = true;
+
+        originalRunSpeed = playerMovement.m_RunSpeed;
+        originalJumpForce = playerMovement.m_JumpForce;
+
+        playerMovement.ApplyBuff(speedMultiplier, jumpMultiplier);
+
+        Debug.Log("加速バフ: 移動速度" + speedMultiplier + "倍、ジャンプ力" + jumpMultiplier + "倍を適用。持続時間: " + duration + "秒");
+
+        yield return new WaitForSeconds(duration);
+
+        playerMovement.RemoveBuff(originalRunSpeed, originalJumpForce);
+
+        isBuffActive = false;
+        Debug.Log("加速バフが終了し、元の能力値に戻りました。");
+    }
+
+    private void SpawnSkillEffect(GameObject effectPrefab, Vector3 position)
+    {
+        if (effectPrefab != null)
+        {
+            GameObject effect = Instantiate(effectPrefab, position, Quaternion.identity);
+            Destroy(effect, 1.0f);
+        }
+    }
 }
