@@ -920,7 +920,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   microphoneDevice: 
   sampleRate: 16000
-  segmentLengthSec: 1.2
+  bufferLengthSec: 10
+  startThreshold: 0.03
+  stopThreshold: 0.015
+  minVoiceDuration: 0.3
+  minSilenceDuration: 0.2
   maxSegments: 100
   recordedSegments: []
 --- !u!4 &1668227659

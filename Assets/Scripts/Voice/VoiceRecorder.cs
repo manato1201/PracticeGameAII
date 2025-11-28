@@ -3,16 +3,34 @@ using System.Collections.Generic;
 
 public class VoiceRecorder : MonoBehaviour
 {
-    public string microphoneDevice = null; // null ならデフォルト
+   [Header("Mic Settings")]
+    public string microphoneDevice = null;
     public int sampleRate = 16000;
-    public float segmentLengthSec = 1.2f; // 1〜2秒くらいが扱いやすい
-    public int maxSegments = 100;         // メモリ制限
+    public int bufferLengthSec = 10; // マイク用リングバッファ長さ
 
-    private AudioClip _recordClip;
-    private int _lastSamplePos = 0;
+    [Header("VAD Settings")]
+    [Range(0f, 1f)]
+    public float startThreshold = 0.03f;   // これ以上で「声が出た」と判断
+    [Range(0f, 1f)]
+    public float stopThreshold = 0.015f;   // これ未満が続くと「無音」と判断
+    public float minVoiceDuration = 0.3f;  // これ未満の短すぎる音は捨ててもいい
+    public float minSilenceDuration = 0.2f;// これだけ無音が続いたら終了判定
 
-    // ミミック用に公開する録音済みクリップ
+    [Header("Output Clips")]
+    public int maxSegments = 50;
     public List<AudioClip> recordedSegments = new List<AudioClip>();
+
+    private AudioClip _micClip;
+    private int _lastSamplePos = 0;
+    private int _channels = 1;
+
+    private bool _inVoice = false;
+    private List<float> _currentSegment = new List<float>();
+    private float _currentVoiceTime = 0f;
+    private float _silenceTime = 0f;
+
+    // 一時バッファ再利用用
+    private float[] _tempBuffer;
 
     void Start()
     {
@@ -28,47 +46,123 @@ public class VoiceRecorder : MonoBehaviour
             microphoneDevice = Microphone.devices[0];
         }
 
-        // 長めのバッファでループ録音
-        int lengthSec = 300; // 5分バッファ
-        _recordClip = Microphone.Start(microphoneDevice, true, lengthSec, sampleRate);
+        _micClip = Microphone.Start(microphoneDevice, true, bufferLengthSec, sampleRate);
         _lastSamplePos = 0;
+
+        // 後でわかるけど、ここでは仮に1ch扱い（ステレオのときもLeftだけ見る想定）
+        _channels = 1;
+
+        // 最大バッファ長 = 全バッファぶん
+        _tempBuffer = new float[bufferLengthSec * sampleRate * _channels];
     }
 
     void Update()
     {
-        if (_recordClip == null) return;
+        if (_micClip == null) return;
 
-        int currentPos = Microphone.GetPosition(microphoneDevice);
-        if (currentPos < 0) return;
+        int micPos = Microphone.GetPosition(microphoneDevice);
+        if (micPos < 0) return;
 
-        int samplesAvailable = currentPos - _lastSamplePos;
+        int totalSamples = _micClip.samples;
+        int samplesAvailable = micPos - _lastSamplePos;
         if (samplesAvailable < 0)
         {
-            // ループした
-            samplesAvailable += _recordClip.samples;
+            // ループ跨ぎ
+            samplesAvailable += totalSamples;
         }
 
-        // segmentLengthSec 分以上録音されていたら切り出す
-        int segmentSamples = (int)(segmentLengthSec * sampleRate);
-        while (samplesAvailable >= segmentSamples)
+        if (samplesAvailable <= 0) return;
+
+        // 一度に処理するサンプル数を制限（安全策）
+        if (samplesAvailable > _tempBuffer.Length)
         {
-            ExtractSegment(segmentSamples);
-            samplesAvailable -= segmentSamples;
+            samplesAvailable = _tempBuffer.Length;
+        }
+
+        // マイクバッファから新規サンプル取得
+        _micClip.GetData(_tempBuffer, _lastSamplePos);
+
+        // 各サンプルを順にVAD処理
+        float sampleDeltaTime = 1f / sampleRate;
+
+        for (int i = 0; i < samplesAvailable; i += _channels)
+        {
+            // チャンネル1個だけ観測（ステレオなら左ch）
+            float s = _tempBuffer[i];
+            float level = Mathf.Abs(s);
+
+            if (_inVoice)
+            {
+                // 発話中
+                _currentSegment.Add(s);
+                _currentVoiceTime += sampleDeltaTime;
+
+                if (level < stopThreshold)
+                {
+                    _silenceTime += sampleDeltaTime;
+                }
+                else
+                {
+                    _silenceTime = 0f;
+                }
+
+                // 一定時間無音が続いたら終了
+                if (_silenceTime >= minSilenceDuration)
+                {
+                    EndSegment();
+                }
+            }
+            else
+            {
+                // 無音状態 → 声が出たか確認
+                if (level >= startThreshold)
+                {
+                    StartSegment(s);
+                }
+                // 何もしないときはスルー
+            }
+        }
+
+        // 読み取ったぶんだけ進める
+        _lastSamplePos += samplesAvailable;
+        if (_lastSamplePos >= totalSamples)
+        {
+            _lastSamplePos -= totalSamples;
         }
     }
 
-    private void ExtractSegment(int segmentSamples)
+    private void StartSegment(float firstSample)
     {
-        float[] data = new float[segmentSamples];
+        _inVoice = true;
+        _currentSegment.Clear();
+        _currentVoiceTime = 0f;
+        _silenceTime = 0f;
 
-        // _lastSamplePos から segmentSamples 分コピー
-        _recordClip.GetData(data, _lastSamplePos);
+        _currentSegment.Add(firstSample);
+        _currentVoiceTime += 1f / sampleRate;
+        // Debug.Log("Voice Start");
+    }
 
-        // 新しいクリップを作ってデータをセット
+    private void EndSegment()
+    {
+        _inVoice = false;
+        _silenceTime = 0f;
+
+        if (_currentVoiceTime < minVoiceDuration)
+        {
+            // 短すぎるノイズは破棄
+            _currentSegment.Clear();
+            // Debug.Log("Voice too short, discarded");
+            return;
+        }
+
+        int sampleCount = _currentSegment.Count;
+        float[] data = _currentSegment.ToArray();
+
         AudioClip segment = AudioClip.Create(
-            "Segment",
-            segmentSamples,
-            _recordClip.channels,
+            "VoiceSegment",
+            sampleCount,
+            1,
             sampleRate,
             false
         );
@@ -77,15 +171,21 @@ public class VoiceRecorder : MonoBehaviour
         recordedSegments.Add(segment);
         if (recordedSegments.Count > maxSegments)
         {
-            // 古いものから捨てる
             Destroy(recordedSegments[0]);
             recordedSegments.RemoveAt(0);
         }
 
-        _lastSamplePos += segmentSamples;
-        if (_lastSamplePos >= _recordClip.samples)
+        _currentSegment.Clear();
+        _currentVoiceTime = 0f;
+
+        // Debug.Log($"Voice End. Saved segment samples: {sampleCount}");
+    }
+
+    void OnDestroy()
+    {
+        if (_micClip != null)
         {
-            _lastSamplePos -= _recordClip.samples;
+            Microphone.End(microphoneDevice);
         }
     }
 }
