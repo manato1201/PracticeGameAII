@@ -4,199 +4,370 @@ using UnityEngine;
 
 public class Bat : MonoBehaviour
 {
-    public float life = 10;
-    
+	// ----------------------------------------
+    // パラメータ
+    // ----------------------------------------
+    [Header("Status")]
+    public float life = 10f;
+    public bool useBehaviorTree = false;
+
     bool isInvincible = false;
     bool isHitted = false;
-    private Coroutine hitCoroutine;
-    // 自身のanimatorの保持
+    Coroutine hitCoroutine;
+    Coroutine deadCoroutine;
+
     Animator animator;
     SpriteRenderer spriteRenderer;
 
-    // ------------------------------------------------------
-    // キャラクターの動き（身体）
+    // ----------------------------------------
+    // 移動（身体）
+    // ----------------------------------------
+    [Header("Movement")]
     public bool facingLeft = true;
     public Vector2 speed = Vector2.zero;
-    
-    GameObject player;
-    Vector3 startPosition;
+    Vector2 position;
 
-    enum BatState
+    // ----------------------------------------
+    // AIターゲット
+    // ----------------------------------------
+    [Header("Target")]
+    [SerializeField] Transform player;   // できればインスペクタでアサイン
+                                        // 未設定なら Start で tag 検索する
+    // ----------------------------------------
+    // ステート
+    // ----------------------------------------
+    enum State
     {
         Idle,   // 待機
         Chase,  // 追跡
-        Search  // 捜索
+        Search, // 捜索
+        Dead,   // 死亡
     }
-    BatState currentState = BatState.Idle;
 
-    public float detectionRadius = 3.0f; // 索敵範囲
-    public float chaseSpeed = 3.0f;      // 追跡時no速度
-    
-    //  AI調整用の変数
-    public float lostRadius = 5.0f;      // 追跡を諦める距離
-    public float searchDuration = 3.0f;  // 探す時間
-    private float searchTimer = 0f;      // 内部計算用タイマー
+    State state = State.Idle;
 
-    private Vector3 searchCenter; // 円の中心（mi失った場所を指定）
-    public float circleRadius = 3.0f; // 円の大きさ（半径）
-    public float circleSpeed = 5.0f;  // 回る速さ
+    // ----------------------------------------
+    // AI 調整用
+    // ----------------------------------------
+    [Header("AI Settings")]
+    public float detectionRadius = 3.0f; // 索敵開始距離
+    public float lostRadius      = 5.0f; // 見失う距離
+    public float chaseSpeed      = 3.0f; // 追跡速度
 
+    public float searchDuration  = 3.0f; // 探索を続ける時間
+    public float circleRadius    = 3.0f; // 探索時の円の半径
+    public float circleSpeed     = 5.0f; // 円の角速度
+    public float searchMoveSpeed = 3.0f; // 探索時にターゲットへ近づく速度
+
+    float searchTimer = 0f;
+    Vector3 searchCenter;
+
+    // ----------------------------------------
+    // Behavior Tree (必要なら)
+    // ----------------------------------------
+    private TreeNode_Base rootNode = null;
+
+    // ========================================
+    // Unityイベント
+    // ========================================
     void Start()
     {
-        animator = GetComponent<Animator>();
+        animator       = GetComponent<Animator>();
         spriteRenderer = GetComponent<SpriteRenderer>();
 
-        player = GameObject.Find("Player");
-        startPosition = transform.position;
+        // Player 未設定なら tag で探す（名前ハードコードよりマシ）
+        if (player == null)
+        {
+            GameObject p = GameObject.FindWithTag("Player");
+            if (p != null) player = p.transform;
+        }
 
-        transform.localScale = new Vector3(5.0f, 5.0f, 1.0f);
+        // ステート初期化
+        ChangeState(State.Idle);
+
+        // BehaviorTreeを使う場合はここでルートノード生成（ユーザー側の実装前提）
+        if (useBehaviorTree)
+        {
+            rootNode = new Selector_IsAlive(this); // 元コードを踏襲
+        }
     }
-    
+
     void OnDestroy()
     {
-        if(hitCoroutine != null) StopCoroutine(hitCoroutine);
+        if (hitCoroutine != null)
+        {
+            StopCoroutine(hitCoroutine);
+            hitCoroutine = null;
+        }
+
+        if (deadCoroutine != null)
+        {
+            StopCoroutine(deadCoroutine);
+            deadCoroutine = null;
+        }
     }
-    
+
     void Update()
     {
-        // 死亡チェック
-        if (life <= 0) {
-            animator.SetBool("IsDead", true);
-            StartCoroutine(DestroyEnemy());
-            return;
-        }
-        if(isHitted) return;
+        FirstInUpdate();
 
-        // AIステートマシン処理
-        float distance = Vector3.Distance(transform.position, player.transform.position);
-
-        switch (currentState)
+        // すでに死んでいるならステートだけ管理
+        if (life <= 0f && state != State.Dead)
         {
-            case BatState.Idle:
-                //【待機状態】
-                speed = Vector2.zero;
-                spriteRenderer.color = Color.white;
-                if (distance < detectionRadius)
-                {
-                    currentState = BatState.Chase;
-                }
-                break;
-
-            case BatState.Chase:
-                //【追跡状態】
-                spriteRenderer.color = Color.red;
-                if (player.transform.position.x > transform.position.x)
-                    facingLeft = false;
-                else
-                    facingLeft = true;
-
-                // 移動処理
-                Vector3 direction = (player.transform.position - transform.position).normalized;
-                speed.x = direction.x * chaseSpeed;
-                speed.y = direction.y * chaseSpeed;
-
-                // プレイヤーが一定距離離れたら「捜索」へ移行
-                if (distance > lostRadius)
-                {
-                    currentState = BatState.Search;
-                    searchTimer = searchDuration;
-                    searchCenter = transform.position;
-                }
-                break;
-
-            case BatState.Search:
-                //【捜索状態】
-
-                spriteRenderer.color = Color.yellow;
-                searchTimer -= Time.deltaTime;
-                // 円周上の目標位置を計算
-                float angle = Time.time * circleSpeed;
-                float x = Mathf.Cos(angle) * circleRadius;
-                float y = Mathf.Sin(angle) * circleRadius;
-
-                Vector3 targetPos = searchCenter + new Vector3(x, y, 0);
-
-                // その目標位置に向かって移動させる
-                Vector3 moveDir = (targetPos - transform.position);
-                speed = moveDir * 5.0f;
-
-                // 移動方向に合わせて体の向きを変える
-                if (speed.x > 0.1f) facingLeft = false;
-                if (speed.x < -0.1f) facingLeft = true;
-
-                if (distance < detectionRadius) currentState = BatState.Chase;
-                if (searchTimer <= 0) currentState = BatState.Idle;
-                break;
-
-                // ===================================================
-                // プレイヤーに体当たりするAIを作りましょう
-
-                // 例：プレイヤーの方を向く
-                Vector3 player_position = player.transform.position;
-                if (player_position.x > transform.position.x)
-                {
-                    facingLeft = false;
-                }
-                else
-                {
-                    facingLeft = true;
-                }
-
-                speed.x = 0.0f;    // 右が+、左が-になります
-                speed.y = 0.0f;    // 上が+、下が-になります
-
-                // ===================================================
+            ChangeState(State.Dead);
         }
-        Movement();
+
+        if (!useBehaviorTree)
+        {
+            // -------------------------------
+            // 手書きステートマシン
+            // -------------------------------
+            switch (state)
+            {
+                case State.Idle:
+                    UpdateIdle();
+                    break;
+
+                case State.Chase:
+                    UpdateChase();
+                    break;
+
+                case State.Search:
+                    UpdateSearch();
+                    break;
+
+                case State.Dead:
+                    UpdateDead();
+                    break;
+            }
+        }
+        else
+        {
+            // -------------------------------
+            // Behavior Tree
+            // -------------------------------
+            if (rootNode != null)
+            {
+                rootNode.ExecuteAsRoot();
+            }
+        }
+
+        // ヒットストップ中は移動だけ止める（AIは動き続ける）
+        if (!isHitted)
+        {
+            Movement();
+        }
     }
-    
-    void Movement(){
-        spriteRenderer.flipX = facingLeft;
+
+    // ========================================
+    // 基本処理
+    // ========================================
+
+    void FirstInUpdate()
+    {
+        position = transform.position;
+    }
+
+    void Movement()
+    {
+        if (spriteRenderer != null)
+        {
+            spriteRenderer.flipX = facingLeft;
+        }
+
         Vector3 pos = transform.position;
         pos.x += speed.x * Time.deltaTime;
         pos.y += speed.y * Time.deltaTime;
-        if(pos.y < 0.8f){
+
+        // 簡易地形あたり
+        if (pos.y < 0.8f)
+        {
             pos.y = 0.8f;
         }
+
         transform.position = pos;
     }
 
-    // ダメージを受ける：プレイヤー側がコールする仕組みになっています
-    public void ApplyDamage(float damage) {
-        if (!isInvincible) {
-            // 攻撃を受けた方向が取れる仕組みになっています
-            float dir = damage / Mathf.Abs(damage);
-            damage = Mathf.Abs(damage);
-            life -= damage;
-            if(hitCoroutine != null) StopCoroutine(hitCoroutine);
-            hitCoroutine = StartCoroutine(HitTime());
+    void ChangeState(State next)
+    {
+        state = next;
+
+        // ステート切り替え時に初期化したいものがあればここで
+        if (state == State.Search)
+        {
+            searchTimer  = searchDuration;
+            searchCenter = transform.position;
         }
     }
 
-    // 無敵時間の設定 : WaitForSecondsで設定している間、isHittedとisInvinsibleをtrueにする
-    IEnumerator HitTime() {
-        isHitted = true;
+    // ========================================
+    // 各ステート処理
+    // ========================================
+
+    // Idle：その場で待機（プレイヤーが一定距離に来たら追跡）
+    void UpdateIdle()
+    {
+        speed = Vector2.zero;
+        if (spriteRenderer != null)
+        {
+            spriteRenderer.color = Color.white;
+        }
+
+        if (player == null) return;
+
+        float distance = Vector3.Distance(transform.position, player.position);
+        if (distance < detectionRadius)
+        {
+            ChangeState(State.Chase);
+        }
+    }
+
+    // Chase：プレイヤーを追いかける
+    void UpdateChase()
+    {
+        if (spriteRenderer != null)
+        {
+            spriteRenderer.color = Color.red;
+        }
+
+        if (player == null)
+        {
+            // プレイヤーが消えたら Idle 戻り
+            ChangeState(State.Idle);
+            return;
+        }
+
+        float distance   = Vector3.Distance(transform.position, player.position);
+        Vector3 dir      = (player.position - transform.position).normalized;
+
+        speed.x = dir.x * chaseSpeed;
+        speed.y = dir.y * chaseSpeed;
+
+        // 向き
+        facingLeft = (player.position.x < transform.position.x);
+
+        // 一定以上離れたら Search へ
+        if (distance > lostRadius)
+        {
+            ChangeState(State.Search);
+        }
+    }
+
+    // Search：見失った周辺を円を描くように捜索
+    void UpdateSearch()
+    {
+        if (spriteRenderer != null)
+        {
+            spriteRenderer.color = Color.yellow;
+        }
+
+        searchTimer -= Time.deltaTime;
+
+        // 円周上の目標位置
+        float angle = Time.time * circleSpeed;
+        float x = Mathf.Cos(angle) * circleRadius;
+        float y = Mathf.Sin(angle) * circleRadius;
+
+        Vector3 targetPos = searchCenter + new Vector3(x, y, 0f);
+
+        Vector3 moveDir = (targetPos - transform.position).normalized;
+        speed = moveDir * searchMoveSpeed;
+
+        // 向き更新
+        if (speed.x > 0.1f)  facingLeft = false;
+        if (speed.x < -0.1f) facingLeft = true;
+
+        // プレイヤーを再発見したら追跡に戻る
+        if (player != null)
+        {
+            float distance = Vector3.Distance(transform.position, player.position);
+            if (distance < detectionRadius)
+            {
+                ChangeState(State.Chase);
+                return;
+            }
+        }
+
+        // 探索時間が終わったら Idle に戻る
+        if (searchTimer <= 0f)
+        {
+            ChangeState(State.Idle);
+        }
+    }
+
+    // Dead：死亡アニメ再生＋一定時間後に消す
+    void UpdateDead()
+    {
+        speed.x = 0f;
+        // 死亡後に少し落下させたければここで y に重力を足す
+        // speed.y -= 9.8f * Time.deltaTime;
+
+        if (animator != null)
+        {
+            animator.SetBool("IsDead", true);
+        }
+
+        // コルーチンを1回だけ起動
+        if (deadCoroutine == null)
+        {
+            deadCoroutine = StartCoroutine(DestroyEnemy());
+        }
+    }
+
+    // ========================================
+    // ダメージ・接触
+    // ========================================
+
+    public void ApplyDamage(float damage)
+    {
+        if (life <= 0f) return;
+        if (isInvincible) return;
+
+        // direction が欲しければ使えるようにしておく（今は未使用）
+        float direction = damage / Mathf.Abs(damage);
+        damage          = Mathf.Abs(damage);
+
+        life -= damage;
+
+        if (hitCoroutine != null)
+        {
+            StopCoroutine(hitCoroutine);
+        }
+        hitCoroutine = StartCoroutine(HitTime());
+    }
+
+    IEnumerator HitTime()
+    {
+        isHitted    = true;
         isInvincible = true;
         yield return new WaitForSeconds(0.5f);
-        isHitted = false;
+        isHitted    = false;
         isInvincible = false;
         hitCoroutine = null;
     }
 
-    void OnTriggerEnter2D(Collider2D collider) {
-        if (collider.gameObject.tag == "Player" && life > 0)
+    void OnTriggerEnter2D(Collider2D collider)
+    {
+        if (collider.CompareTag("Player") && life > 0f)
         {
-            collider.gameObject.GetComponent<CharacterController2D>().ApplyDamage(2f, transform.position);
+            var controller = collider.GetComponent<CharacterController2D>();
+            if (controller != null)
+            {
+                controller.ApplyDamage(2f, transform.position);
+            }
         }
     }
-    
-    // 志望処理
-    IEnumerator DestroyEnemy() {
+
+    IEnumerator DestroyEnemy()
+    {
+        // 死亡演出の時間
         yield return new WaitForSeconds(0.5f);
         Destroy(gameObject);
     }
 
-    // デバッグ用：シーンビューで範囲を可視化
+    // ========================================
+    // デバッグ表示(Gizmos)
+    // ========================================
     void OnDrawGizmos()
     {
         // 発見する距離（赤）
@@ -208,10 +379,11 @@ public class Bat : MonoBehaviour
         Gizmos.DrawWireSphere(transform.position, lostRadius);
 
         // 捜索範囲（青）
-        if (currentState == BatState.Search)
+        if (Application.isPlaying && state == State.Search)
         {
             Gizmos.color = Color.cyan;
             Gizmos.DrawWireSphere(searchCenter, circleRadius);
         }
     }
+
 }
