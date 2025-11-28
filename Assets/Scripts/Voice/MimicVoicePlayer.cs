@@ -11,6 +11,7 @@ public class MimicVoicePlayer : MonoBehaviour
 
     private float _elapsedTime = 0f;
     private float _cooldownTimer = 0f;
+    public SimpleVoiceChanger voiceChanger;
 
     void Update()
     {
@@ -43,8 +44,18 @@ public class MimicVoicePlayer : MonoBehaviour
     private void PlayRandomSegment()
     {
         int idx = Random.Range(0, recorder.recordedSegments.Count);
-        audioSource.clip = recorder.recordedSegments[idx];
-        audioSource.Play();
+        var clip = recorder.recordedSegments[idx];
+
+        if (voiceChanger != null)
+        {
+            voiceChanger.PlayWithRandomPitch(clip);
+        }
+        else
+        {
+            audioSource.clip = clip;
+            audioSource.pitch = 1f;
+            audioSource.Play();
+        }
     }
 
     // 最新の n% を優先する
