@@ -546,6 +546,14 @@ PrefabInstance:
       propertyPath: life
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 2352655214698428137, guid: cccb836d928e4e245b25529c147edccd, type: 3}
+      propertyPath: player
+      value: 
+      objectReference: {fileID: 1922358177}
+    - target: {fileID: 2352655214698428137, guid: cccb836d928e4e245b25529c147edccd, type: 3}
+      propertyPath: useBehaviorTree
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 2352655214698428140, guid: cccb836d928e4e245b25529c147edccd, type: 3}
       propertyPath: m_Name
       value: Bat (1)
