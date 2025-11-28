@@ -1281,6 +1281,7 @@ MonoBehaviour:
   targetPlayer: {fileID: 2037817682}
   minDistanceToSpeak: 15
   speakCooldown: 5
+  voiceChanger: {fileID: 1689649233}
 --- !u!1 &1758580022 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 1025145325119744, guid: d975e66254b08984ab50d4c39dcb947f, type: 3}
