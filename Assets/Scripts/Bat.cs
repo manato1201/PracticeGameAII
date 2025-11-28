@@ -54,13 +54,25 @@ public class Bat : MonoBehaviour
     public float lostRadius      = 5.0f; // 見失う距離
     public float chaseSpeed      = 3.0f; // 追跡速度
 
-    public float searchDuration  = 3.0f; // 探索を続ける時間
+    public float searchDuration  = 6.0f; // 探索を続ける時間
     public float circleRadius    = 3.0f; // 探索時の円の半径
-    public float circleSpeed     = 5.0f; // 円の角速度
-    public float searchMoveSpeed = 3.0f; // 探索時にターゲットへ近づく速度
+    public float circleSpeed     = 8.0f; // 円の角速度
+    public float searchMoveSpeed = 5.0f; // 探索時にターゲットへ近づく速度
 
     float searchTimer = 0f;
     Vector3 searchCenter;
+    Vector2 searchTarget;
+
+    // ----------------------------------------
+    // 歩き回る（動き回る）
+    // ----------------------------------------
+    [Header("Roam Settings")]
+    public float roamRadius = 6.0f;
+    public float roamSpeed  = 2.0f;
+    public float roamTurnSpeed = 2.0f;
+
+    Vector2 roamTarget;
+    Vector2 startPosition;
 
     // ----------------------------------------
     // Behavior Tree (必要なら)
@@ -82,6 +94,8 @@ public class Bat : MonoBehaviour
             if (p != null) player = p.transform;
         }
 
+        startPosition = transform.position;
+        roamTarget = GetRandomPosition();
         // ステート初期化
         ChangeState(State.Idle);
 
@@ -197,7 +211,30 @@ public class Bat : MonoBehaviour
         {
             searchTimer  = searchDuration;
             searchCenter = transform.position;
+
+            searchTarget = searchCenter + (Vector3)(Random.insideUnitCircle * circleRadius);
+            if (searchTarget.y < 1.0f) searchTarget.y = 1.0f;
         }
+        else if (state == State.Idle)
+        {
+            // Idleに戻った時、最初の目的地を再設定
+            roamTarget = GetFarRandomPosition();
+        }
+    }
+
+    Vector2 GetFarRandomPosition()
+    {
+        for (int i = 0; i < 10; i++)
+        {
+            Vector2 candidate = startPosition + (Random.insideUnitCircle * roamRadius);
+            if (candidate.y < 1.0f) candidate.y = 1.0f;
+
+            if (Vector2.Distance(candidate, transform.position) > 2.0f)
+            {
+                return candidate;
+            }
+        }
+        return startPosition;
     }
 
     // ========================================
@@ -205,21 +242,47 @@ public class Bat : MonoBehaviour
     // ========================================
 
     // Idle：その場で待機（プレイヤーが一定距離に来たら追跡）
+    // →プレイヤーを見つけるまで、ゆらゆら動く
+
+    float hoverSpeed = 2.0f;
+    float hoverAmplitude = 1.0f;
     void UpdateIdle()
     {
-        speed = Vector2.zero;
-        if (spriteRenderer != null)
+        if (spriteRenderer != null) spriteRenderer.color = Color.white;
+
+        // --- 1. 目的地との距離チェック ---
+        float distToTarget = Vector2.Distance(transform.position, roamTarget);
+
+        if (distToTarget < 0.5f)
         {
-            spriteRenderer.color = Color.white;
+            roamTarget = GetRandomPosition();
         }
 
-        if (player == null) return;
+        // --- 2. 滑らかな移動（ここがポイント） ---
+        Vector2 direction = (roamTarget - (Vector2)transform.position).normalized;
+        Vector2 desiredVelocity = direction * roamSpeed;
 
-        float distance = Vector3.Distance(transform.position, player.position);
-        if (distance < detectionRadius)
+        speed = Vector2.Lerp(speed, desiredVelocity, Time.deltaTime * roamTurnSpeed);
+
+        // --- 3. 向きの見た目更新 ---
+        if (speed.x > 0.1f) facingLeft = false;
+        if (speed.x < -0.1f) facingLeft = true;
+
+        // --- 4. プレイヤー発見処理（変更なし） ---
+        if (player == null) return;
+        if (Vector3.Distance(transform.position, player.position) < detectionRadius)
         {
             ChangeState(State.Chase);
         }
+    }
+
+    Vector2 GetRandomPosition()
+    {
+        // startPositionを中心に、roamRadiusの範囲内でランダムな場所を取得
+        Vector2 randomPoint = startPosition + (Random.insideUnitCircle * roamRadius);
+        if (randomPoint.y < 1.0f) randomPoint.y = 1.0f;
+
+        return randomPoint;
     }
 
     // Chase：プレイヤーを追いかける
@@ -252,8 +315,6 @@ public class Bat : MonoBehaviour
             ChangeState(State.Search);
         }
     }
-
-    // Search：見失った周辺を円を描くように捜索
     void UpdateSearch()
     {
         if (spriteRenderer != null)
@@ -263,15 +324,21 @@ public class Bat : MonoBehaviour
 
         searchTimer -= Time.deltaTime;
 
-        // 円周上の目標位置
-        float angle = Time.time * circleSpeed;
-        float x = Mathf.Cos(angle) * circleRadius;
-        float y = Mathf.Sin(angle) * circleRadius;
+        // 目的地との距離を測る
+        float dist = Vector2.Distance(transform.position, searchTarget);
 
-        Vector3 targetPos = searchCenter + new Vector3(x, y, 0f);
+        // 目的地に近づいたら、すぐ次の場所へ！（待機しない＝焦っている表現）
+        if (dist < 0.5f)
+        {
+            Vector2 randomPoint = (Vector2)searchCenter + (Random.insideUnitCircle * circleRadius);
+            if (randomPoint.y < 1.0f) randomPoint.y = 1.0f;
+            searchTarget = randomPoint;
+        }
 
-        Vector3 moveDir = (targetPos - transform.position).normalized;
-        speed = moveDir * searchMoveSpeed;
+        Vector2 direction = ((Vector2)searchTarget - (Vector2)transform.position).normalized;
+        Vector2 desiredVelocity = direction * searchMoveSpeed;
+
+        speed = Vector2.Lerp(speed, desiredVelocity, Time.deltaTime * roamTurnSpeed);
 
         // 向き更新
         if (speed.x > 0.1f)  facingLeft = false;
