@@ -613,10 +613,10 @@ PrefabInstance:
       addedObject: {fileID: 1689649233}
     - targetCorrespondingSourceObject: {fileID: 9007870402881920789, guid: 1fb6be4654539974ba5d2475bf27b7d4, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 1689649232}
+      addedObject: {fileID: 1689649231}
     - targetCorrespondingSourceObject: {fileID: 9007870402881920789, guid: 1fb6be4654539974ba5d2475bf27b7d4, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 1689649231}
+      addedObject: {fileID: 1689649234}
   m_SourcePrefab: {fileID: 100100000, guid: 1fb6be4654539974ba5d2475bf27b7d4, type: 3}
 --- !u!4 &778605354 stripped
 Transform:
@@ -1105,27 +1105,6 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
---- !u!114 &1689649232
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1689649226}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c2085198a0aa46e46b257e52909dd484, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  microphoneDevice: 
-  sampleRate: 16000
-  bufferLengthSec: 10
-  startThreshold: 0.03
-  stopThreshold: 0.015
-  minVoiceDuration: 0.3
-  minSilenceDuration: 0.2
-  maxSegments: 50
-  recordedSegments: []
 --- !u!114 &1689649233
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1141,6 +1120,23 @@ MonoBehaviour:
   audioSource: {fileID: 1689649231}
   minPitch: 0.85
   maxPitch: 1.2
+--- !u!114 &1689649234
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1689649226}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0d0b14a6cdaccc047b9d4f09156ebe28, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  recorder: {fileID: 1668227658}
+  audioSource: {fileID: 1689649231}
+  targetPlayer: {fileID: 2037817682}
+  minDistanceToSpeak: 15
+  speakCooldown: 5
 --- !u!1 &1758580022 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 1025145325119744, guid: d975e66254b08984ab50d4c39dcb947f, type: 3}
