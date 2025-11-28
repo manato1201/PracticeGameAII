@@ -9885,7 +9885,7 @@ BoxCollider2D:
     drawMode: 0
     adaptiveTiling: 0
   m_AutoTiling: 0
-  m_Size: {x: 1.2, y: 1.2}
+  m_Size: {x: 1, y: 1}
   m_EdgeRadius: 0
 --- !u!114 &7701523894754531374
 MonoBehaviour:
@@ -9971,7 +9971,7 @@ Light:
   serializedVersion: 11
   m_Type: 2
   m_Color: {r: 1, g: 0.6207441, b: 0.20392156, a: 1}
-  m_Intensity: 36.54982
+  m_Intensity: 35.41163
   m_Range: 8
   m_SpotAngle: 30
   m_InnerSpotAngle: 21.80208

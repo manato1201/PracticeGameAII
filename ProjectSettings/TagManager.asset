@@ -5,9 +5,8 @@ TagManager:
   serializedVersion: 3
   tags:
   - Enemy
-  - Bat
+  - FxTemporaire
   - Ground
-  - Wall
   layers:
   - Default
   - TransparentFX
