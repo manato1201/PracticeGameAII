@@ -234,6 +234,7 @@ MonoBehaviour:
   targetPlayer: {fileID: 522727734}
   minDistanceToSpeak: 15
   speakCooldown: 5
+  voiceChanger: {fileID: 0}
 --- !u!82 &20019017
 AudioSource:
   m_ObjectHideFlags: 0
@@ -526,9 +527,33 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 1139487818724482, guid: 50936cccdb69523458c1b42052ebafff, type: 3}
+      propertyPath: m_Layer
+      value: 6
+      objectReference: {fileID: 0}
     - target: {fileID: 1377240496476148, guid: 50936cccdb69523458c1b42052ebafff, type: 3}
       propertyPath: m_Name
       value: Player
+      objectReference: {fileID: 0}
+    - target: {fileID: 1377240496476148, guid: 50936cccdb69523458c1b42052ebafff, type: 3}
+      propertyPath: m_Layer
+      value: 6
+      objectReference: {fileID: 0}
+    - target: {fileID: 1393053470196254, guid: 50936cccdb69523458c1b42052ebafff, type: 3}
+      propertyPath: m_Layer
+      value: 6
+      objectReference: {fileID: 0}
+    - target: {fileID: 1477428158609486, guid: 50936cccdb69523458c1b42052ebafff, type: 3}
+      propertyPath: m_Layer
+      value: 6
+      objectReference: {fileID: 0}
+    - target: {fileID: 1568700092027370, guid: 50936cccdb69523458c1b42052ebafff, type: 3}
+      propertyPath: m_Layer
+      value: 6
+      objectReference: {fileID: 0}
+    - target: {fileID: 1620716113202630, guid: 50936cccdb69523458c1b42052ebafff, type: 3}
+      propertyPath: m_Layer
+      value: 6
       objectReference: {fileID: 0}
     - target: {fileID: 4660076192433278, guid: 50936cccdb69523458c1b42052ebafff, type: 3}
       propertyPath: m_RootOrder
@@ -915,6 +940,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 93c58048d8f598841a8a21015e663d6c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  player: {fileID: 0}
+  allyPrefab: {fileID: 6883475689770012661, guid: 9383784e0b15a5c4cb75abb2684109de, type: 3}
+  spawnPoint: {fileID: 0}
 --- !u!4 &905100820
 Transform:
   m_ObjectHideFlags: 0
@@ -2172,6 +2200,10 @@ PrefabInstance:
     - target: {fileID: 6092066363372934641, guid: 8e7dd5195f3afe64797d26bbec34fde4, type: 3}
       propertyPath: m_Name
       value: Orbital
+      objectReference: {fileID: 0}
+    - target: {fileID: 6092066363372934641, guid: 8e7dd5195f3afe64797d26bbec34fde4, type: 3}
+      propertyPath: m_Layer
+      value: 6
       objectReference: {fileID: 0}
     - target: {fileID: 6092066363372934641, guid: 8e7dd5195f3afe64797d26bbec34fde4, type: 3}
       propertyPath: m_IsActive

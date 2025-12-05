@@ -30,10 +30,13 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public enum BlackBoardKey {
+public enum BlackBoardKey
+{
     Move,
     Target,
     Time,
+
+    IsPlayerPinch, // プレイヤーが死んでしまう時の救世主
 }
 
 public class BlackBoard
