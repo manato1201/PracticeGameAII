@@ -65,23 +65,34 @@ public class GameManager : MonoBehaviour
 
     void SpawnAlly()
     {
-        allySpawned = true; // フラグを立てる
+        allySpawned = true;
 
         if (allyPrefab != null)
         {
-            // 出現位置を決める（プレイヤーの少し後ろ、上空など）
-            Vector3 pos = playerScript.transform.position;
-            pos.x -= 2.0f;
-            pos.y += 1.0f;
+            // 3体出す
+            for (int i = 0; i < 3; i++)
+            {
+                // 1. 出現位置をランダムにばらけさせる
+                Vector3 basePos = (spawnPoint != null) ? spawnPoint.position : playerScript.transform.position;
+                Vector3 spawnPos = basePos;
+                spawnPos.x -= Random.Range(1.0f, 8.0f);
+                spawnPos.y += Random.Range(0.0f, 2.0f);
 
-            if (spawnPoint != null) pos = spawnPoint.position;
+                // 2. 生成する
+                GameObject newAlly = Instantiate(allyPrefab, spawnPos, Quaternion.identity);
 
-            Instantiate(allyPrefab, pos, Quaternion.identity);
+                // 3. サイズを小さくする（0.8倍）
+                newAlly.transform.localScale = new Vector3(0.8f, 0.8f, 1f);
 
-            Debug.Log("<color=cyan>味方AIプレイヤーを守る！</color>");
+                // 4. 全員「赤色」にする
+                SpriteRenderer sr = newAlly.GetComponentInChildren<SpriteRenderer>();
+                if (sr != null)
+                {
+                    sr.color = Color.red;
+                }
+            }
 
-            // ブラックボード、ここで「ピンチ状態」を書き込んで実装BGMを変えるなど
-            blackBoard.SetValue(BlackBoardKey.IsPlayerPinch, 1);
+            Debug.Log("味方部隊参戦！");
         }
     }
 
