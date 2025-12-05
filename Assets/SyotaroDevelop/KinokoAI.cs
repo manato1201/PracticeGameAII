@@ -3,55 +3,67 @@ using System.Collections;
 
 public class EnemyAI : MonoBehaviour
 {
-    // --- ƒCƒ“ƒXƒyƒNƒ^[İ’è€–Ú ---
+    // --- ã‚¤ãƒ³ã‚¹ãƒšã‚¯ã‚¿ãƒ¼è¨­å®šé …ç›® ---
 
-    [Header("ƒ^[ƒQƒbƒgİ’è")]
-    [Tooltip("ƒvƒŒƒCƒ„[‚Ìƒ^ƒO")]
+    [Header("ã‚¿ãƒ¼ã‚²ãƒƒãƒˆè¨­å®š")]
+    [Tooltip("ãƒ—ãƒ¬ã‚¤ãƒ¤ãƒ¼ã®ã‚¿ã‚°")]
     public string playerTag = "Player";
     private Transform playerTransform;
 
-    [Header("ƒAƒjƒ[ƒVƒ‡ƒ“‚ÆƒRƒ“ƒ|[ƒlƒ“ƒg")]
+    [Header("ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ã¨ã‚³ãƒ³ãƒãƒ¼ãƒãƒ³ãƒˆ")]
     public Animator animator;
     public Rigidbody2D rb;
     private RigidbodyType2D originalRbType = RigidbodyType2D.Dynamic;
 
-    [Header("„‰ñ/‘Ò‚¿•š‚¹ŠÔ")]
+    [Header("å·¡å›/å¾…ã¡ä¼ã›æ™‚é–“")]
     public float idleDuration = 3f;
     public float ambushDuration = 20f;
     private bool isExecutingRoutine = false;
     private Coroutine routineCoroutine;
-    [Tooltip("Ambush/IdleŠÔ‚ÌƒAƒjƒ[ƒVƒ‡ƒ“‘JˆÚ‚É•K—v‚È‘Ò‚¿ŠÔ")]
+    [Tooltip("Ambush/Idleé–“ã®ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³é·ç§»ã«å¿…è¦ãªå¾…ã¡æ™‚é–“")]
     public float routineTransitionTime = 0.5f;
 
-    [Header("s“®”ÍˆÍ‚Ì‹——£‚Æ‘¬“x")]
-    [Tooltip("Run‚É‘JˆÚ‚·‚é‹——£")]
+    [Header("ã‚¹ã‚±ãƒ¼ãƒ«é·ç§»è¨­å®š (Ambushç”¨)")]
+    [Tooltip("ã‚¢ãƒ³ãƒ–ãƒƒã‚·ãƒ¥æ™‚ã®ç›®æ¨™ã‚¹ã‚±ãƒ¼ãƒ« (ä¾‹: 0.2f ã§ 1/5)")]
+    public float ambushTargetScale = 0.2f;
+    [Tooltip("ã‚¹ã‚±ãƒ¼ãƒ«å¤‰æ›´ã«ã‹ã‘ã‚‹æ™‚é–“")]
+    public float scaleTransitionTime = 0.5f;
+    private Vector3 originalScale;
+
+    [Header("è¡Œå‹•ç¯„å›²ã®è·é›¢ã¨é€Ÿåº¦")]
+    [Tooltip("Runã«é·ç§»ã™ã‚‹è·é›¢")]
     public float runRange = 8f;
-    [Tooltip("Attack‚É‘JˆÚ‚·‚é‹——£")]
+    [Tooltip("Attackã«é·ç§»ã™ã‚‹è·é›¢")]
     public float attackRange = 2f;
     public float moveSpeed = 5f;
 
-    [Header("UŒ‚§Œä")]
-    [Tooltip("˜A‘±UŒ‚‚ğ–h‚®‚½‚ß‚Ìƒtƒ‰ƒO")]
+    [Header("æ”»æ’ƒåˆ¶å¾¡")]
+    [Tooltip("é€£ç¶šæ”»æ’ƒã‚’é˜²ããŸã‚ã®ãƒ•ãƒ©ã‚°")]
     public bool canExecuteAttack = true;
-    [Tooltip("UŒ‚ƒN[ƒ‹ƒ_ƒEƒ“‚Ì’·‚³iƒAƒjƒ[ƒVƒ‡ƒ“ŠÔ‚æ‚è’·‚­„§j")]
+    [Tooltip("æ”»æ’ƒã‚¯ãƒ¼ãƒ«ãƒ€ã‚¦ãƒ³ã®é•·ã•ï¼ˆã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³æ™‚é–“ã‚ˆã‚Šé•·ãæ¨å¥¨ï¼‰")]
     public float attackCooldownTime = 1.0f;
+    [Tooltip("å®Ÿéš›ã«ãƒ€ãƒ¡ãƒ¼ã‚¸ã‚’ä¸ãˆã‚‹ãŸã‚ã®æ”»æ’ƒåˆ¤å®šç¯„å›²")]
+    public float attackRangeForDamage = 4.0f;
+    [Tooltip("æ”»æ’ƒãƒ€ãƒ¡ãƒ¼ã‚¸é‡")]
+    public float attackDamage = 1f;
 
-    // ššš ƒ_ƒ[ƒW‚Æ”í’eó‘Ô‚É•K—v‚È•Ï”‚ğ’Ç‰Á ššš
-    [Header("ƒ‰ƒCƒt‚Æ”í’e")]
-    public float life = 100f; // ƒ‰ƒCƒtƒ|ƒCƒ“ƒg
-    public bool isInvincible = false; // –³“Gó‘Ôƒtƒ‰ƒO
-    public bool isHitted = false; // ”í’e’†ƒtƒ‰ƒO
-    private Coroutine hitCoroutine; // HitTimeƒRƒ‹[ƒ`ƒ“‚ÌQÆ
-    // ššš ------------------------------------ ššš
+    public Transform AttackPoint;
 
-    // --- ƒAƒjƒ[ƒVƒ‡ƒ“ƒpƒ‰ƒ[ƒ^–¼ ---
+    [Header("ãƒ©ã‚¤ãƒ•ã¨è¢«å¼¾")]
+    public float life = 100f;
+    public bool isInvincible = false;
+    public bool isHitted = false;
+    private Coroutine hitCoroutine;
+
+    // --- ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿å ---
     private const string RUN_BOOL = "Run";
     private const string ATTACK_TRIGGER = "Attack";
     private const string IS_AMBUSH_BOOL = "IsAmbush";
     private const string ANIM_END_TRIGGER = "AnimEnd";
+    private const string DEATH_TRIGGER = "Death";
 
-    // --- “à•”ó‘Ô ---
-    private enum EnemyState { Routine, Attacking, Running }
+    // --- å†…éƒ¨çŠ¶æ…‹ ---
+    private enum EnemyState { Routine, Attacking, Running, Dead }
     private EnemyState currentState = EnemyState.Routine;
 
     // ------------------------------------
@@ -65,6 +77,8 @@ public class EnemyAI : MonoBehaviour
         {
             originalRbType = rb.bodyType;
         }
+
+        originalScale = transform.localScale;
     }
 
     void Start()
@@ -76,7 +90,7 @@ public class EnemyAI : MonoBehaviour
         }
         else
         {
-            Debug.LogError("PlayerTag: " + playerTag + " ‚ÌƒIƒuƒWƒFƒNƒg‚ªŒ©‚Â‚©‚è‚Ü‚¹‚ñB");
+            Debug.LogError("PlayerTag: " + playerTag + " ã®ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆãŒè¦‹ã¤ã‹ã‚Šã¾ã›ã‚“ã€‚");
         }
 
         if (animator != null)
@@ -91,12 +105,12 @@ public class EnemyAI : MonoBehaviour
     {
         if (playerTransform == null) return;
 
+        if (currentState == EnemyState.Dead) return;
+
         float distanceToPlayer = Vector2.Distance(transform.position, playerTransform.position);
 
-        // š ”í’e’†‚ÍAIƒƒWƒbƒN‚ğ’â~
         if (isHitted)
         {
-            // ”í’e’†‚ÍˆÚ“®‚ğ‹­§’â~
             rb.linearVelocity = Vector2.zero;
             animator.SetBool(RUN_BOOL, false);
             return;
@@ -108,7 +122,7 @@ public class EnemyAI : MonoBehaviour
             return;
         }
 
-        // ------------------ s“®ƒƒWƒbƒN ------------------
+        // ------------------ è¡Œå‹•ãƒ­ã‚¸ãƒƒã‚¯ ------------------
 
         if (distanceToPlayer <= attackRange)
         {
@@ -120,12 +134,11 @@ public class EnemyAI : MonoBehaviour
         }
         else if (distanceToPlayer <= runRange)
         {
-            // --- ’ÇÕ (Run) ---
+            // --- è¿½è·¡ (Run) ---
             if (currentState != EnemyState.Running)
             {
                 SetState(EnemyState.Running);
 
-                // Routine‚ğ’â~
                 if (routineCoroutine != null)
                 {
                     StopCoroutine(routineCoroutine);
@@ -133,30 +146,29 @@ public class EnemyAI : MonoBehaviour
                 }
                 isExecutingRoutine = false;
 
-                // ’ÇÕŠJnAAmbushƒAƒjƒ[ƒVƒ‡ƒ“‚ğŠmÀ‚ÉI—¹‚³‚¹‚é
                 animator.SetBool(IS_AMBUSH_BOOL, false);
+                if (transform.localScale != originalScale)
+                {
+                    transform.localScale = originalScale;
+                }
             }
 
-            // RunningƒXƒe[ƒg’†‚ÍAí‚ÉRunƒAƒjƒ[ƒVƒ‡ƒ“‚ğ—LŒø‚É‚·‚é
             animator.SetBool(RUN_BOOL, true);
 
             MoveToPlayer();
         }
         else
         {
-            // --- „‰ñ/‘Ò‚¿•š‚¹ (Routine) ---
+            // --- å·¡å›/å¾…ã¡ä¼ã› (Routine) ---
             if (currentState != EnemyState.Routine)
             {
                 SetState(EnemyState.Routine);
 
-                // ˆÚ“®‚ğ–¾¦“I‚É’â~‚·‚é
                 rb.linearVelocity = Vector2.zero;
 
-                // RunƒAƒjƒ[ƒVƒ‡ƒ“‚ğŠmÀ‚ÉƒIƒt‚É‚·‚é
                 animator.SetBool(RUN_BOOL, false);
             }
 
-            // ƒ‹[ƒ`ƒ“‚ª’â~‚µ‚Ä‚¢‚½‚çÄŠJ
             if (!isExecutingRoutine)
             {
                 if (routineCoroutine == null)
@@ -167,24 +179,26 @@ public class EnemyAI : MonoBehaviour
         }
     }
 
-    // --- ƒXƒe[ƒgŠÇ— ---
+    // --- ã‚¹ãƒ†ãƒ¼ãƒˆç®¡ç† ---
     private void SetState(EnemyState newState)
     {
         currentState = newState;
     }
 
     // ------------------------------------
-    // --- s“®À‘••”•ª ---
+    // --- è¡Œå‹•å®Ÿè£…éƒ¨åˆ† ---
     // ------------------------------------
 
-    // Idle‚ÆAmbush‚ğŒJ‚è•Ô‚·ƒ‹[ƒ`ƒ“
     IEnumerator RoutineLoop()
     {
         isExecutingRoutine = true;
         while (currentState == EnemyState.Routine)
         {
-            // 1. Idle (‘Ò‹@)
+            // 1. Idle (å¾…æ©Ÿ)
             if (currentState != EnemyState.Routine) break;
+
+            yield return StartCoroutine(ScaleTransition(originalScale, scaleTransitionTime));
+
             animator.SetBool(IS_AMBUSH_BOOL, false);
 
             yield return new WaitForSeconds(routineTransitionTime);
@@ -194,10 +208,13 @@ public class EnemyAI : MonoBehaviour
             if (currentState != EnemyState.Routine) break;
             yield return new WaitForSeconds(idleDuration);
 
-            // 2. Ambush (‘Ò‚¿•š‚¹)
+            // 2. Ambush (å¾…ã¡ä¼ã›)
 
             if (currentState != EnemyState.Routine) break;
             animator.SetBool(IS_AMBUSH_BOOL, true);
+
+            Vector3 targetScale = new Vector3(originalScale.x * ambushTargetScale, originalScale.y * ambushTargetScale, originalScale.z);
+            yield return StartCoroutine(ScaleTransition(targetScale, scaleTransitionTime));
 
             yield return new WaitForSeconds(routineTransitionTime);
 
@@ -206,11 +223,36 @@ public class EnemyAI : MonoBehaviour
             if (currentState != EnemyState.Routine) break;
             yield return new WaitForSeconds(ambushDuration);
         }
+
+        if (transform.localScale != originalScale)
+        {
+            transform.localScale = originalScale;
+        }
+
         isExecutingRoutine = false;
         routineCoroutine = null;
     }
 
-    // Run (ƒvƒŒƒCƒ„[‚ğ’ÇÕ)
+    IEnumerator ScaleTransition(Vector3 targetScale, float duration)
+    {
+        Vector3 startScale = transform.localScale;
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            if (transform.localScale == targetScale)
+                break;
+
+            elapsed += Time.deltaTime;
+            float t = elapsed / duration;
+
+            transform.localScale = Vector3.Lerp(startScale, targetScale, t);
+            yield return null;
+        }
+
+        transform.localScale = targetScale;
+    }
+
     void MoveToPlayer()
     {
         Vector2 direction = (playerTransform.position - transform.position).normalized;
@@ -218,7 +260,6 @@ public class EnemyAI : MonoBehaviour
         Flip(direction.x);
     }
 
-    // Attack (ƒvƒŒƒCƒ„[‚ğUŒ‚)
     void AttackPlayer()
     {
         canExecuteAttack = false;
@@ -235,14 +276,12 @@ public class EnemyAI : MonoBehaviour
         StartCoroutine(AttackCooldown(attackCooldownTime));
     }
 
-    // UŒ‚ƒN[ƒ‹ƒ_ƒEƒ“ƒRƒ‹[ƒ`ƒ“
     IEnumerator AttackCooldown(float duration)
     {
         yield return new WaitForSeconds(duration);
 
         if (currentState == EnemyState.Attacking)
         {
-            // ƒN[ƒ‹ƒ_ƒEƒ“‚ªI—¹‚µ‚½‚çA‹­§“I‚ÉRunningƒXƒe[ƒg‚É–ß‚·
             SetState(EnemyState.Running);
         }
 
@@ -251,7 +290,6 @@ public class EnemyAI : MonoBehaviour
         canExecuteAttack = true;
     }
 
-    // Œü‚«‚Ì”½“]
     void Flip(float moveDirection)
     {
         if (moveDirection > 0 && transform.localScale.x < 0)
@@ -264,10 +302,75 @@ public class EnemyAI : MonoBehaviour
         }
     }
 
-    // ƒAƒjƒ[ƒVƒ‡ƒ“ƒCƒxƒ“ƒg‚©‚çŒÄ‚Ño‚·‚½‚ß‚Ìƒƒ\ƒbƒh
     public void AnimEnd()
     {
         animator.SetTrigger(ANIM_END_TRIGGER);
+
+        if (currentState == EnemyState.Attacking && AttackPoint != null)
+        {
+            Vector2 attackCenter = AttackPoint.position;
+            float attackRadius = attackRangeForDamage;
+
+            Collider2D[] hitObjects = Physics2D.OverlapCircleAll(attackCenter, attackRadius);
+
+            foreach (Collider2D hit in hitObjects)
+            {
+                GameObject other = hit.gameObject;
+
+                // æ”»æ’ƒã—ãŸã®ãŒè‡ªåˆ†è‡ªèº«ã§ãªã„ã“ã¨ã‚’ç¢ºèª
+                if (other == gameObject) continue;
+
+                // æ”»æ’ƒæ–¹å‘ã‚’è¨ˆç®— (ãƒãƒƒã‚¯ãƒãƒƒã‚¯ã®ãŸã‚)
+                float damageDirection = (other.transform.position.x > transform.position.x) ? 1f : -1f;
+
+                if (other.tag == "Player")
+                {
+                    CharacterController2D playerController = other.GetComponent<CharacterController2D>();
+
+                    if (playerController != null)
+                    {
+                        playerController.ApplyDamage(attackDamage, attackCenter);
+                        Debug.Log("Playerã«ãƒ€ãƒ¡ãƒ¼ã‚¸ã‚’ä¸ãˆã¾ã—ãŸ: " + attackDamage);
+                    }
+                }
+                else if (other.tag == "Enemy")
+                {
+                    // --- æ•µã¸ã®ãƒ€ãƒ¡ãƒ¼ã‚¸å‡¦ç† ---
+                    float damageToApply = attackDamage * damageDirection;
+                    bool damaged = false;
+
+                    // 1. Enemy ã‚¹ã‚¯ãƒªãƒ—ãƒˆã‚’æŒã¤ã‹ãƒã‚§ãƒƒã‚¯
+                    Enemy enemyController = other.GetComponent<Enemy>();
+                    if (enemyController != null)
+                    {
+                        enemyController.ApplyDamage(damageToApply);
+                        damaged = true;
+                    }
+
+                    // 2. Soldier ã‚¹ã‚¯ãƒªãƒ—ãƒˆã‚’æŒã¤ã‹ãƒã‚§ãƒƒã‚¯
+                    Soldier soldier = other.GetComponent<Soldier>();
+                    if (soldier != null)
+                    {
+                        soldier.ApplyDamage(damageToApply);
+                        damaged = true;
+                    }
+
+                    // 3. Bat ã‚¹ã‚¯ãƒªãƒ—ãƒˆã‚’æŒã¤ã‹ãƒã‚§ãƒƒã‚¯
+                    Bat bat = other.GetComponent<Bat>();
+                    if (bat != null)
+                    {
+                        bat.ApplyDamage(damageToApply);
+                        damaged = true;
+                    }
+
+                    if (damaged)
+                    {
+                        Debug.Log("ä»–ã®Enemyã«ãƒ€ãƒ¡ãƒ¼ã‚¸ã‚’ä¸ãˆã¾ã—ãŸ: " + attackDamage);
+                    }
+                    // --- ------------------ ---
+                }
+            }
+        }
 
         if (currentState == EnemyState.Attacking)
         {
@@ -275,39 +378,73 @@ public class EnemyAI : MonoBehaviour
         }
     }
 
-    // ššš C³‚³‚ê‚½ƒ_ƒ[ƒWˆ— ššš
+    // ------------------------------------
+    // --- ãƒ€ãƒ¡ãƒ¼ã‚¸ã¨æ­»äº¡å‡¦ç† ---
+    // ------------------------------------
+
     public void ApplyDamage(float damage)
     {
-        if (!isInvincible)
+        if (currentState == EnemyState.Dead || isInvincible) return;
+
+        if (routineCoroutine != null)
         {
-            // š RoutineLoop‚ğ’â~‚µAƒAƒjƒ[ƒVƒ‡ƒ“‚Ìã‘‚«‚ğ–h‚®
-            if (routineCoroutine != null)
-            {
-                StopCoroutine(routineCoroutine);
-                routineCoroutine = null;
-            }
-            isExecutingRoutine = false;
-
-            // ƒ_ƒ[ƒW‚ÌŒü‚«‚ğŒvZ (³‚È‚ç‰E‚©‚çA•‰‚È‚ç¶‚©‚ç)
-            float direction = damage / Mathf.Abs(damage);
-            damage = Mathf.Abs(damage);
-
-            animator.SetBool("Hit", true);
-            life -= damage;
-
-            // ƒmƒbƒNƒoƒbƒNˆ—
-            rb.linearVelocity = Vector2.zero;
-            rb.AddForce(new Vector2(direction * 500f, 100f));
-
-            if (hitCoroutine != null)
-            {
-                StopCoroutine(hitCoroutine);
-            }
-            hitCoroutine = StartCoroutine(HitTime());
+            StopCoroutine(routineCoroutine);
+            routineCoroutine = null;
         }
+        isExecutingRoutine = false;
+
+        float direction = damage / Mathf.Abs(damage);
+        damage = Mathf.Abs(damage);
+
+        animator.SetBool("Hit", true);
+        life -= damage;
+
+        if (life <= 0)
+        {
+            Die();
+            return;
+        }
+
+        rb.linearVelocity = Vector2.zero;
+        rb.AddForce(new Vector2(direction * 500f, 100f));
+
+        if (hitCoroutine != null)
+        {
+            StopCoroutine(hitCoroutine);
+        }
+        hitCoroutine = StartCoroutine(HitTime());
     }
 
-    // UŒ‚‚ğó‚¯‚½ŒãAˆê’èŠÔ–³“G‚É‚È‚é
+    private void Die()
+    {
+        SetState(EnemyState.Dead);
+
+        if (routineCoroutine != null) StopCoroutine(routineCoroutine);
+        if (hitCoroutine != null) StopCoroutine(hitCoroutine);
+
+        animator.SetBool(RUN_BOOL, false);
+        animator.SetBool("Hit", false);
+        animator.SetTrigger(DEATH_TRIGGER);
+
+        rb.bodyType = RigidbodyType2D.Kinematic;
+        rb.linearVelocity = Vector2.zero;
+
+        Collider2D[] colliders = GetComponents<Collider2D>();
+        foreach (Collider2D col in colliders)
+        {
+            col.enabled = false;
+        }
+
+        StartCoroutine(DisableObjectAfterDeathAnimation(2.0f));
+    }
+
+    IEnumerator DisableObjectAfterDeathAnimation(float duration)
+    {
+        yield return new WaitForSeconds(duration);
+
+        gameObject.SetActive(false);
+    }
+
     IEnumerator HitTime()
     {
         isHitted = true;
@@ -321,19 +458,16 @@ public class EnemyAI : MonoBehaviour
 
         hitCoroutine = null;
 
-        // š ”í’eˆ—I—¹ŒãAŸ‚ÌƒXƒe[ƒg‚ğŒˆ’è‚·‚é
         if (playerTransform != null)
         {
             float distanceToPlayer = Vector2.Distance(transform.position, playerTransform.position);
 
             if (distanceToPlayer <= runRange)
             {
-                // ƒvƒŒƒCƒ„[‚ª‹ß‚­‚É‚¢‚½‚ç’ÇÕ‚ğÄŠJ
                 SetState(EnemyState.Running);
             }
             else
             {
-                // ƒvƒŒƒCƒ„[‚ª‰“‚­‚É‚¢‚½‚çRoutine‚ğÄŠJ
                 SetState(EnemyState.Routine);
             }
         }
