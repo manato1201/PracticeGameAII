@@ -398,6 +398,33 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 2352655214698428142, guid: cccb836d928e4e245b25529c147edccd, type: 3}
   m_PrefabInstance: {fileID: 1097492328}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &324493369
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 57463847}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e9f58998be0e9a047a4e3eba7b689253, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  velocity: {x: 0, y: 0}
+  isCharger: 0
+  chargeDelay: 3
+  maxChargeDuration: 12
+  chargeTimer: 0
+  cohesionFactor: 1
+  separationFactor: 1
+  alignmentFactor: 1
+  leaderFactor: 1
+  protectFactor: 1
+  speedFactor: 1
+  randomnessFactor: 1
+  reactionLerp: 5
+  skill: 0.5
+  role: 0
 --- !u!4 &334105577 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 2352655214698428142, guid: cccb836d928e4e245b25529c147edccd, type: 3}
@@ -676,12 +703,24 @@ PrefabInstance:
       value: 10.81
       objectReference: {fileID: 0}
     - target: {fileID: 9013803042287811451, guid: 1fb6be4654539974ba5d2475bf27b7d4, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 9013803042287811451, guid: 1fb6be4654539974ba5d2475bf27b7d4, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 9013803042287811451, guid: 1fb6be4654539974ba5d2475bf27b7d4, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 9013803042287811451, guid: 1fb6be4654539974ba5d2475bf27b7d4, type: 3}
       propertyPath: m_LocalPosition.x
       value: 5
       objectReference: {fileID: 0}
     - target: {fileID: 9013803042287811451, guid: 1fb6be4654539974ba5d2475bf27b7d4, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 2
+      value: 3.41
       objectReference: {fileID: 0}
     - target: {fileID: 9013803042287811451, guid: 1fb6be4654539974ba5d2475bf27b7d4, type: 3}
       propertyPath: m_LocalPosition.z
@@ -755,10 +794,10 @@ MonoBehaviour:
   speed: 2
   neighborDistance: 4
   separationDistance: 1
-  cohesionWeight: 0.03
-  separationWeight: 0.08
-  alignmentWeight: 0.05
-  leaderWeight: 0.26
+  cohesionWeight: 0.8
+  separationWeight: 2
+  alignmentWeight: 0.54
+  leaderWeight: 0.72
   leader: {fileID: 1998517351}
   player: {fileID: 2037817682}
   chargeDelay: 3
@@ -769,13 +808,16 @@ MonoBehaviour:
   maxChargeSpeed: 10
   sectorCount: 4
   protectTarget: {fileID: 1998517351}
-  protectWeight: 0.25
-  surroundRadius: 4
-  attackDistance: 10
+  protectWeight: 0.07
+  surroundRadius: 6.4
+  attackDistance: 30
   retreatBoidThreshold: 3
   retreatDuration: 3
-  chargeWaveDuration: 2.5
-  surroundDistance: 8
+  chargeWaveDuration: 10
+  surroundDistance: 12
+  searchDistanceFactor: 1.5
+  searchWanderStrength: 0.5
+  searchAntiCohesion: 0.02
   flockState: 0
 --- !u!114 &735256894
 MonoBehaviour:
@@ -794,6 +836,16 @@ MonoBehaviour:
   chargeDelay: 3
   maxChargeDuration: 2
   chargeTimer: 0
+  cohesionFactor: 1
+  separationFactor: 1
+  alignmentFactor: 1
+  leaderFactor: 1
+  protectFactor: 1
+  speedFactor: 1
+  randomnessFactor: 1
+  reactionLerp: 5
+  skill: 0.5
+  role: 0
 --- !u!4 &735256895
 Transform:
   m_ObjectHideFlags: 0
@@ -950,7 +1002,10 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 2352655214698428140, guid: cccb836d928e4e245b25529c147edccd, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 324493369}
   m_SourcePrefab: {fileID: 100100000, guid: cccb836d928e4e245b25529c147edccd, type: 3}
 --- !u!1001 &1253506362
 PrefabInstance:
@@ -1567,7 +1622,7 @@ GameObject:
   - component: {fileID: 2127862510}
   m_Layer: 0
   m_Name: Ground
-  m_TagString: Untagged
+  m_TagString: Ground
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
