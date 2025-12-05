@@ -96,7 +96,7 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    void LateUpdate()
+    /*void LateUpdate()
 	{
 		if(debugText != null){
 			debugText.GetComponent<TextMeshProUGUI>().text = buffer.ToString();
@@ -106,6 +106,6 @@ public class GameManager : MonoBehaviour
 	
 	public void DispStr(string str){
 		buffer.Append(str + "\n");
-	}
+	}*/
 	
 }

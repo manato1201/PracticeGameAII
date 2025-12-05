@@ -8,6 +8,7 @@ public class AllyController : MonoBehaviour
     public float attackRange = 1.2f; // 攻撃が届く距離
     public float damage = 3f;
     public float attackCooldown = 1.0f;
+    public float hp = 10f;
 
     private Transform targetEnemy;
     private bool canAttack = true;
@@ -79,8 +80,16 @@ public class AllyController : MonoBehaviour
         Vector2 direction = (targetEnemy.position - transform.position).normalized;
         rb.linearVelocity = new Vector2(direction.x * moveSpeed, rb.linearVelocity.y);
 
-        if (direction.x > 0.1f) transform.localScale = new Vector3(1, 1, 1);
-        else if (direction.x < -0.1f) transform.localScale = new Vector3(-1, 1, 1);
+        float scaleSize = Mathf.Abs(transform.localScale.x);
+
+        if (direction.x > 0.1f)
+        {
+            transform.localScale = new Vector3(scaleSize, scaleSize, 1); // 右向き
+        }
+        else if (direction.x < -0.1f)
+        {
+            transform.localScale = new Vector3(-scaleSize, scaleSize, 1); // 左向き
+        }
 
         if (anim != null) anim.SetFloat("Speed", Mathf.Abs(rb.linearVelocity.x));
     }
@@ -115,8 +124,16 @@ public class AllyController : MonoBehaviour
 
         canAttack = true;
     }
-    public void DoDashDamage()
+    public void DoDashDamage() { }
+
+    // --- ダメージを受ける処理 ---
+    // Soldierなどから呼ばれる可能性がある
+    public void ApplyDamage(float damage, Vector3 position)
     {
-        
+        hp -= damage;
+        if (hp <= 0)
+        {
+            Destroy(gameObject);
+        }
     }
 }
