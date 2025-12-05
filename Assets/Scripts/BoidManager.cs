@@ -44,12 +44,18 @@ public class BoidManager : MonoBehaviour
     public float chargeWaveDuration    = 2.5f;// ChargeWave の継続時間
     public float surroundDistance      = 8f;  // プレイヤーがこの距離以内なら Surround
 
+    [Header("Search設定（索敵）")]
+    public float searchDistanceFactor = 1.5f;   // attackDistance の何倍離れたら Search に入るか
+    public float searchWanderStrength = 0.5f;   // ランダムな揺らぎの強さ
+    public float searchAntiCohesion   = 0.02f;  // 拡散させるための「逆 cohesion」の強さ
+
     public enum FlockState
     {
         Idle,       // うろつき
         Surround,   // 守る対象を囲む
         ChargeWave, // 波状攻撃中
-        Retreat     // 退却中
+        Retreat,    // 退却中
+        Search      // 拡散索敵中
     }
 
     [SerializeField]
@@ -72,15 +78,67 @@ public class BoidManager : MonoBehaviour
         {
             Vector2 pos = Random.insideUnitCircle * 5f;
             var boidObj = Instantiate(boidPrefab, pos, Quaternion.identity);
-            var boid    = boidObj.AddComponent<Boid>();
+            var boid = boidObj.AddComponent<Boid>();
 
-            boid.velocity          = Random.insideUnitCircle.normalized * speed;
-            boid.isCharger         = false;
-            boid.chargeDelay       = chargeDelay;
+            boid.velocity = Random.insideUnitCircle.normalized * speed;
+            boid.isCharger = false;
+            boid.chargeDelay = chargeDelay;
             boid.maxChargeDuration = maxChargeDuration;
+
+
+            // ここから性格設定 -----------------------------
+            float r = Random.value;
+
+            if (r < 0.15f)
+            {
+                // エリート（全体の15%）
+                boid.role = BoidRole.Elite;
+                boid.skill = Random.Range(0.7f, 1.0f);
+
+                boid.cohesionFactor = Random.Range(1.2f, 1.6f);
+                boid.separationFactor = Random.Range(0.8f, 1.1f);
+                boid.alignmentFactor = Random.Range(1.2f, 1.8f);
+                boid.leaderFactor = Random.Range(1.5f, 2.5f);
+                boid.protectFactor = Random.Range(1.3f, 2.0f);
+                boid.speedFactor = Random.Range(1.1f, 1.4f);
+                boid.randomnessFactor = Random.Range(0.3f, 0.8f); // 無駄なブレは少なめ
+                boid.reactionLerp = Random.Range(6f, 10f); // 反応早い
+            }
+            else if (r < 0.8f)
+            {
+                // 普通（65%）
+                boid.role = BoidRole.Normal;
+                boid.skill = Random.Range(0.4f, 0.8f);
+
+                boid.cohesionFactor = Random.Range(0.8f, 1.2f);
+                boid.separationFactor = Random.Range(0.8f, 1.2f);
+                boid.alignmentFactor = Random.Range(0.8f, 1.2f);
+                boid.leaderFactor = Random.Range(0.8f, 1.2f);
+                boid.protectFactor = Random.Range(0.8f, 1.2f);
+                boid.speedFactor = Random.Range(0.8f, 1.2f);
+                boid.randomnessFactor = Random.Range(0.8f, 1.2f);
+                boid.reactionLerp = Random.Range(3f, 7f);
+            }
+            else
+            {
+                // ポンコツ（20%）
+                boid.role = BoidRole.Clumsy;
+                boid.skill = Random.Range(0.0f, 0.4f);
+
+                boid.cohesionFactor = Random.Range(0.3f, 0.8f); // 群れから若干外れがち
+                boid.separationFactor = Random.Range(0.6f, 1.4f); // 極端なやつもいる
+                boid.alignmentFactor = Random.Range(0.3f, 0.8f); // 向き合わない
+                boid.leaderFactor = Random.Range(0.3f, 0.7f); // 指示を聞かない
+                boid.protectFactor = Random.Range(0.2f, 0.7f); // シールドに入らないやつもいる
+                boid.speedFactor = Random.Range(0.6f, 1.1f); // 遅い or ちょい速い
+                boid.randomnessFactor = Random.Range(1.2f, 2.0f); // フラフラしがち
+                boid.reactionLerp = Random.Range(1f, 4f); // 反応遅い
+            }
+            // --------------------------------------------
 
             boids.Add(boid);
         }
+
     }
 
     //====================================================================
@@ -88,7 +146,7 @@ public class BoidManager : MonoBehaviour
     //====================================================================
     void Update()
     {
-        // 破棄済みBoidを掃除（MissingReference対策）
+        // 破棄済みBoidを掃除
         boids.RemoveAll(b => b == null);
 
         // 隊全体ステート更新
@@ -105,6 +163,24 @@ public class BoidManager : MonoBehaviour
 
             UpdateBoid(boid);
         }
+    }
+
+    //====================================================================
+    // 群れ中心位置
+    //====================================================================
+    Vector2 GetFlockCenter()
+    {
+        if (boids.Count == 0) return Vector2.zero;
+        Vector2 sum = Vector2.zero;
+        int c = 0;
+        foreach (var b in boids)
+        {
+            if (b == null) continue;
+            sum += (Vector2)b.transform.position;
+            c++;
+        }
+        if (c == 0) return Vector2.zero;
+        return sum / c;
     }
 
     //====================================================================
@@ -145,6 +221,17 @@ public class BoidManager : MonoBehaviour
             return;
         }
 
+        // プレイヤーとの距離で Search 判定
+        if (player != null)
+        {
+            float flockToPlayer = Vector2.Distance(GetFlockCenter(), player.position);
+            if (flockToPlayer > attackDistance * searchDistanceFactor)
+            {
+                flockState = FlockState.Search;
+                return;
+            }
+        }
+
         // Surround 判定
         if (protectTarget != null && player != null)
         {
@@ -166,7 +253,7 @@ public class BoidManager : MonoBehaviour
     void HandleChargeSelection()
     {
         if (player == null || boids.Count == 0) return;
-        if (flockState == FlockState.Retreat) return; // 退却中は突撃しない
+        if (flockState == FlockState.Retreat || flockState == FlockState.Search) return; // 退却中・索敵中は突撃しない
 
         chargeIntervalTimer += Time.deltaTime;
         if (chargeIntervalTimer < chargeInterval) return;
@@ -234,11 +321,22 @@ public class BoidManager : MonoBehaviour
         int toAssign = Mathf.Min(capacity, candidates.Count);
         for (int n = 0; n < toAssign; n++)
         {
-            int idx = Random.Range(0, candidates.Count);
-            Boid chosen = candidates[idx];
-            candidates.RemoveAt(idx);
+            // skill最大の個体を選ぶ
+            int bestIndex = 0;
+            float bestSkill = -1f;
+            for (int i = 0; i < candidates.Count; i++)
+            {
+                if (candidates[i].skill > bestSkill)
+                {
+                    bestSkill = candidates[i].skill;
+                    bestIndex = i;
+                }
+            }
 
-            chosen.isCharger  = true;
+            Boid chosen = candidates[bestIndex];
+            candidates.RemoveAt(bestIndex);
+
+            chosen.isCharger   = true;
             chosen.chargeTimer = 0f;
         }
 
@@ -288,31 +386,53 @@ public class BoidManager : MonoBehaviour
             }
         }
 
-        // 速度制限
-        float limitSpeed = boid.isCharger ? maxChargeSpeed : speed;
+        // ApplyFlockBehavior以前の速度を保存
+        Vector2 oldVel = boid.velocity;
+        //ApplyFlockBehavior(boid);
+        Vector2 desiredVel = boid.velocity;
+
+        // 個体ごとの反応速度で補間（反応遅い個体はヌルヌル追従）
+        float lerpT = Mathf.Clamp01(boid.reactionLerp * Time.deltaTime);
+        boid.velocity = Vector2.Lerp(oldVel, desiredVel, lerpT);
+
+        // ステート＆個体ごとの速度上限
+        float baseLimit = boid.isCharger ? maxChargeSpeed : speed;
+
+        // ステート補正
+        switch (flockState)
+        {
+            case FlockState.Idle:      baseLimit *= 1.0f; break;
+            case FlockState.Surround:  baseLimit *= 1.2f; break;
+            case FlockState.ChargeWave:baseLimit *= 1.6f; break;
+            case FlockState.Retreat:   baseLimit *= 1.4f; break;
+            case FlockState.Search:    baseLimit *= 1.1f; break;
+        }
+
+        // 個体差補正
+        float limitSpeed = baseLimit * boid.speedFactor;
+
+        // clamp
         if (boid.velocity.sqrMagnitude > 0.0001f)
         {
             boid.velocity = Vector2.ClampMagnitude(boid.velocity, limitSpeed);
         }
         else
         {
-            // 完全停止していた場合の保険
-            boid.velocity = Random.insideUnitCircle.normalized * speed;
+            boid.velocity = Random.insideUnitCircle.normalized * limitSpeed;
         }
 
-        // 実際の移動
         boid.transform.position += (Vector3)(boid.velocity * Time.deltaTime);
     }
 
     //====================================================================
-    // 群れ行動（cohesion / separation / alignment / leader / protect）
+    // 群れ行動（cohesion / separation / alignment / leader / protect / search）
     //====================================================================
     void ApplyFlockBehavior(Boid boid)
     {
-        Vector2 cohesion   = Vector2.zero;   // 近くの仲間の中心へ向かう
-        Vector2 separation = Vector2.zero;   // 仲間から離れる
-        Vector2 alignment  = Vector2.zero;   // 仲間の平均速度に合わせる
-        int neighborCount  = 0;
+        Vector2 cohesion = Vector2.zero; // 近くの仲間の中心へ向かう
+        Vector2 separation = Vector2.zero; // 仲間から離れる
+        Vector2 alignment = Vector2.zero; // 仲間の平均速度に合わせる
+        int neighborCount = 0;
 
         for (int i = 0; i < boids.Count; i++)
         {
@@ -323,16 +443,16 @@ public class BoidManager : MonoBehaviour
 
             if (dist < neighborDistance)
             {
-                cohesion  += (Vector2)other.transform.position;
+                cohesion += (Vector2)other.transform.position;
                 alignment += other.velocity;
                 neighborCount++;
 
                 if (dist < separationDistance)
                 {
                     // 近すぎる場合は反発
-                    Vector2 diff     = (Vector2)other.transform.position - (Vector2)boid.transform.position;
-                    float safeDist   = Mathf.Max(dist, 0.0001f);
-                    separation      -= diff.normalized / safeDist;
+                    Vector2 diff = (Vector2)other.transform.position - (Vector2)boid.transform.position;
+                    float safeDist = Mathf.Max(dist, 0.0001f);
+                    separation -= diff.normalized / safeDist;
                 }
             }
         }
@@ -377,34 +497,44 @@ public class BoidManager : MonoBehaviour
                 // リーダー追従を強めて逃げる
                 lW *= 3f;
                 cW *= 0.3f;
-                pW  = 0f;
+                pW = 0f;
+                break;
+
+            case FlockState.Search:
+                // 拡散：cohesion を逆にして「中心から離れる」力にする
+                cW = -searchAntiCohesion;
+                // 整列は弱めにして全体の向きをバラバラに
+                aW *= 0.3f;
+                // リーダー追従・シールドは弱め or なし
+                lW *= 0.2f;
+                pW *= 0.2f;
                 break;
         }
 
-        cohesion   *= cW;
-        separation *= sW;
-        alignment  *= aW;
+        // state重みに「個体差」を掛ける
+        cohesion *= cW * boid.cohesionFactor;
+        separation *= sW * boid.separationFactor;
+        alignment *= aW * boid.alignmentFactor;
 
-        // リーダー追従 or プレイヤーから離れる
+        // リーダー追従 or 退却方向
         Vector2 followLeader = Vector2.zero;
         if (leader != null)
         {
-            followLeader = ((Vector2)leader.position - (Vector2)boid.transform.position) * lW;
+            followLeader = ((Vector2)leader.position - (Vector2)boid.transform.position) * (lW * boid.leaderFactor);
         }
         else if (flockState == FlockState.Retreat && player != null)
         {
             Vector2 away = ((Vector2)boid.transform.position - (Vector2)player.position).normalized;
-            followLeader = away * lW * 5f;
+            followLeader = away * (lW * boid.leaderFactor) * 5f;
         }
 
-        // シールド行動（守る対象とプレイヤーの中間へ寄る）
+        // シールド行動
         Vector2 protectDir = Vector2.zero;
         if (protectTarget != null && player != null)
         {
             Vector2 line = (Vector2)(protectTarget.position - player.position);
-            Vector2 mid  = (Vector2)player.position + line * 0.5f;
+            Vector2 mid = (Vector2)player.position + line * 0.5f;
 
-            // Surround のときは守る対象の周囲にリング状に配置したいので、少し中心寄りに
             if (flockState == FlockState.Surround)
             {
                 Vector2 toBoid = (Vector2)boid.transform.position - (Vector2)protectTarget.position;
@@ -415,11 +545,18 @@ public class BoidManager : MonoBehaviour
                 }
             }
 
-            protectDir = (mid - (Vector2)boid.transform.position) * pW;
+            protectDir = (mid - (Vector2)boid.transform.position) * (pW * boid.protectFactor);
         }
 
-        // 最終的なベクトル合成
-        boid.velocity += cohesion + separation + alignment + followLeader + protectDir;
+        // Search時のランダム揺らぎ
+        Vector2 wander = Vector2.zero;
+        if (flockState == FlockState.Search)
+        {
+            wander = Random.insideUnitCircle * searchWanderStrength * boid.randomnessFactor;
+        }
+
+        // 最終合成
+        boid.velocity += cohesion + separation + alignment + followLeader + protectDir + wander;
     }
 }
 
