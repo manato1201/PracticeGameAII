@@ -1,7 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Playables;
 
 public class EnemyComp {
 	
@@ -57,4 +56,19 @@ public class EnemyComp {
 		}
 	}
 	
+	// 同じ階層のGameObjectを取得する
+	public GameObject[] GetSinblings(){
+		Transform parent = me.transform.parent;
+		List<GameObject> objList = new List<GameObject>();
+		if(parent != null){
+			for(int i=0;parent.childCount>i;i++){
+				GameObject obj = parent.GetChild(i).gameObject;
+				if(obj != me.gameObject){
+					objList.Add(obj);
+				}
+			}
+		}
+		return objList.ToArray();
+	}
+
 }
