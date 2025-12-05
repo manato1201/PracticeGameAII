@@ -119,6 +119,11 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!1 &57463847 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 2352655214698428140, guid: cccb836d928e4e245b25529c147edccd, type: 3}
+  m_PrefabInstance: {fileID: 1097492328}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &59477231
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -134,6 +139,14 @@ PrefabInstance:
     - target: {fileID: 2352655214698428140, guid: cccb836d928e4e245b25529c147edccd, type: 3}
       propertyPath: m_Name
       value: Bat3
+      objectReference: {fileID: 0}
+    - target: {fileID: 2352655214698428140, guid: cccb836d928e4e245b25529c147edccd, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2352655214698428141, guid: cccb836d928e4e245b25529c147edccd, type: 3}
+      propertyPath: m_Enabled
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 2352655214698428142, guid: cccb836d928e4e245b25529c147edccd, type: 3}
       propertyPath: m_LocalPosition.x
@@ -1144,34 +1157,87 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 775632962}
-  m_Layer: 5
-  m_Name: Fill Area
+  - component: {fileID: 735256895}
+  - component: {fileID: 735256894}
+  - component: {fileID: 735256893}
+  m_Layer: 0
+  m_Name: BoidsManager
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!224 &775632962
-RectTransform:
+--- !u!114 &735256893
+MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 775632961}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_GameObject: {fileID: 735256892}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 276701c4957ea1a41b815a57cbd049e4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  boidPrefab: {fileID: 57463847}
+  boidCount: 20
+  speed: 2
+  neighborDistance: 4
+  separationDistance: 1
+  cohesionWeight: 0.03
+  separationWeight: 0.08
+  alignmentWeight: 0.05
+  leaderWeight: 0.26
+  leader: {fileID: 1998517351}
+  player: {fileID: 2037817682}
+  chargeDelay: 3
+  maxChargeDuration: 12
+  chargeInterval: 5
+  maxConcurrentChargers: 5
+  chargeAcceleration: 15
+  maxChargeSpeed: 10
+  sectorCount: 4
+  protectTarget: {fileID: 1998517351}
+  protectWeight: 0.25
+  surroundRadius: 4
+  attackDistance: 10
+  retreatBoidThreshold: 3
+  retreatDuration: 3
+  chargeWaveDuration: 2.5
+  surroundDistance: 8
+  flockState: 0
+--- !u!114 &735256894
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 735256892}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e9f58998be0e9a047a4e3eba7b689253, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  velocity: {x: 0, y: 0}
+  isCharger: 1
+  chargeDelay: 3
+  maxChargeDuration: 2
+  chargeTimer: 0
+--- !u!4 &735256895
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 735256892}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 11.875, y: 2.8125, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 611604785}
-  m_Father: {fileID: 631442836}
+  m_Children: []
+  m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.25}
-  m_AnchorMax: {x: 1, y: 0.75}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
-  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1001 &851115997
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1431,6 +1497,26 @@ PrefabInstance:
     - target: {fileID: 2352655214698428140, guid: cccb836d928e4e245b25529c147edccd, type: 3}
       propertyPath: m_Name
       value: Bat
+      objectReference: {fileID: 0}
+    - target: {fileID: 2352655214698428140, guid: cccb836d928e4e245b25529c147edccd, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2352655214698428141, guid: cccb836d928e4e245b25529c147edccd, type: 3}
+      propertyPath: m_Color.b
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2352655214698428141, guid: cccb836d928e4e245b25529c147edccd, type: 3}
+      propertyPath: m_Color.g
+      value: 0.6341173
+      objectReference: {fileID: 0}
+    - target: {fileID: 2352655214698428141, guid: cccb836d928e4e245b25529c147edccd, type: 3}
+      propertyPath: m_Color.r
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2352655214698428141, guid: cccb836d928e4e245b25529c147edccd, type: 3}
+      propertyPath: m_Enabled
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 2352655214698428142, guid: cccb836d928e4e245b25529c147edccd, type: 3}
       propertyPath: m_LocalPosition.x
@@ -1970,6 +2056,14 @@ PrefabInstance:
     - target: {fileID: 2352655214698428140, guid: cccb836d928e4e245b25529c147edccd, type: 3}
       propertyPath: m_Name
       value: Bat2
+      objectReference: {fileID: 0}
+    - target: {fileID: 2352655214698428140, guid: cccb836d928e4e245b25529c147edccd, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2352655214698428141, guid: cccb836d928e4e245b25529c147edccd, type: 3}
+      propertyPath: m_Enabled
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 2352655214698428142, guid: cccb836d928e4e245b25529c147edccd, type: 3}
       propertyPath: m_LocalPosition.x
