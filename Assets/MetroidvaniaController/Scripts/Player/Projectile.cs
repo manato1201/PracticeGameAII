@@ -7,7 +7,7 @@ public class Projectile : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D other)
     {
-        if (other.CompareTag("Enemy"))
+        if (other.CompareTag("Enemy") || other.CompareTag("Bat"))
         {
             other.gameObject.SendMessage("ApplyDamage", damage, SendMessageOptions.DontRequireReceiver);
 
