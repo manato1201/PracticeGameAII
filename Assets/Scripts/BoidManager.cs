@@ -78,7 +78,7 @@ public class BoidManager : MonoBehaviour
         {
             Vector2 pos = Random.insideUnitCircle * 5f;
             var boidObj = Instantiate(boidPrefab, pos, Quaternion.identity);
-            var boid = boidObj.AddComponent<Boid>();
+            var boid    = boidObj.AddComponent<Boid>();
 
             boid.velocity = Random.insideUnitCircle.normalized * speed;
             boid.isCharger = false;
@@ -443,16 +443,16 @@ public class BoidManager : MonoBehaviour
 
             if (dist < neighborDistance)
             {
-                cohesion += (Vector2)other.transform.position;
+                cohesion  += (Vector2)other.transform.position;
                 alignment += other.velocity;
                 neighborCount++;
 
                 if (dist < separationDistance)
                 {
                     // 近すぎる場合は反発
-                    Vector2 diff = (Vector2)other.transform.position - (Vector2)boid.transform.position;
-                    float safeDist = Mathf.Max(dist, 0.0001f);
-                    separation -= diff.normalized / safeDist;
+                    Vector2 diff     = (Vector2)other.transform.position - (Vector2)boid.transform.position;
+                    float safeDist   = Mathf.Max(dist, 0.0001f);
+                    separation      -= diff.normalized / safeDist;
                 }
             }
         }
