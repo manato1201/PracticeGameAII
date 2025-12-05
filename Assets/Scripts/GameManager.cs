@@ -7,6 +7,7 @@ using TMPro;
 public class GameManager : MonoBehaviour
 {
 	public static GameManager instance;
+	public BlackBoard blackBoard;
 
 	// デバッグ用文字表示 DispStr用
 	GameObject debugText;
@@ -15,6 +16,9 @@ public class GameManager : MonoBehaviour
 	
 	void Awake(){
 		instance = this;
+		
+		// ゲーム開始時に設定したいことがあれば、ここで行いましょう
+		blackBoard = new BlackBoard();
 	}
 	
 	// Start is called before the first frame update
