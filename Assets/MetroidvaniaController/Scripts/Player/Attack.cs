@@ -13,6 +13,7 @@ public class Attack : MonoBehaviour
     public bool isTimeToCheck = false;
 
     public CharacterController2D playerMovement;
+    public GameObject summonPrefab;
 
     [Header("Skill 2 Settings")]
     public float throwSpeed = 15f;
@@ -51,7 +52,7 @@ public class Attack : MonoBehaviour
 
         if (Input.GetButtonDown("Skill1") && canAttack)
         {
-            if(playerMovement.mp >= 30)
+            if (playerMovement.mp >= 30)
             {
                 canAttack = false;
                 animator.SetBool("Skill1", true);
@@ -82,6 +83,18 @@ public class Attack : MonoBehaviour
                 StartCoroutine(AttackCooldown(1.0f, "Skill3"));
                 Skill3Logic();
                 playerMovement.decreaseMP(30);
+            }
+        }
+
+        if (Input.GetButtonDown("Skill4") && canAttack)
+        {
+            if (playerMovement.mp >= 80)
+            {
+                canAttack = false;
+                animator.SetBool("Skill4", true);
+                StartCoroutine(AttackCooldown(1.0f, "Skill4"));
+                Skill4Logic();
+                playerMovement.decreaseMP(80);
             }
         }
     }
@@ -174,6 +187,19 @@ public class Attack : MonoBehaviour
         }
 
         StartCoroutine(SpeedJumpBoostBuff(buffDuration));
+    }
+
+    public void Skill4Logic()
+    {
+        if (summonPrefab == null)
+        {
+            Debug.LogError("召喚プレハブが設定されていません。");
+            return;
+        }
+        Vector3 spawnPosition = transform.position;
+        spawnPosition.x = transform.position.x;
+        GameObject newSummon = Instantiate(summonPrefab, spawnPosition, Quaternion.identity);
+        SummonController summonController = newSummon.GetComponent<SummonController>();
     }
 
     IEnumerator SpeedJumpBoostBuff(float duration)

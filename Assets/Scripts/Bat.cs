@@ -422,6 +422,11 @@ public class Bat : MonoBehaviour
             {
                 controller.ApplyDamage(2f, transform.position);
             }
+            var sc= collider.GetComponent<SummonController>();
+            if (sc != null)
+            {
+                sc.TakeDamage(2f);
+            }
         }
     }
 

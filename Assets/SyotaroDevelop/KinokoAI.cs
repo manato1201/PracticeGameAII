@@ -463,6 +463,15 @@ public class EnemyAI : MonoBehaviour
                         damaged = true;
                     }
 
+                    SummonController sc = other.GetComponent<SummonController>();
+                    if (sc != null)
+                    {
+                        sc.TakeDamage(damageToApply);
+                        damaged = true;
+                    }
+
+
+
                     if (damaged)
                     {
                         Debug.Log("他のEnemyにダメージを与えました: " + attackDamage);
