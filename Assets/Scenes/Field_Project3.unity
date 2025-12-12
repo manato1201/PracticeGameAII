@@ -389,6 +389,54 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 2352655214698428142, guid: cccb836d928e4e245b25529c147edccd, type: 3}
   m_PrefabInstance: {fileID: 264593850}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &149457017
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 149457019}
+  - component: {fileID: 149457018}
+  m_Layer: 0
+  m_Name: MetaAI_System
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &149457018
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 149457017}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6e3819e3a37f6c14c9eae2569b8fe2ec, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  data: {fileID: 11400000, guid: 44d32dcc08686094f99ff2e38c75bb41, type: 2}
+  player: {fileID: 1827998396}
+  currentRank: 1
+  stressValue: 0
+--- !u!4 &149457019
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 149457017}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -5.8041654, y: 9.016035, z: -0.04039806}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &183449537
 GameObject:
   m_ObjectHideFlags: 0
@@ -3439,6 +3487,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Kinoko
       objectReference: {fileID: 0}
+    - target: {fileID: 6138881915862801924, guid: f7dc6f07cc6c9f94c9aed2d9a56e5577, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -3469,3 +3521,4 @@ SceneRoots:
   - {fileID: 1657492185}
   - {fileID: 1213611571}
   - {fileID: 93626652}
+  - {fileID: 149457019}
