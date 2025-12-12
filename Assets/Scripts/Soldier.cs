@@ -5,117 +5,7 @@ using UnityEngine;
 public class Soldier : MonoBehaviour
 {
     // ============================================================
-    // ★ FSM互換フィールド（ブラックボックスFSMが要求する旧変数）
-    // ============================================================
-
-    public Vector2 position;
-    public bool facingLeft = true;
-
-    public float lowHPThreshold = 5f;
-
-    public float viewAngle = 120f;
-
-    public float timer = 0f;
-
-    public float gridSize = 0.7f;
-    public Vector2 mapMin = new Vector2(-20, -20);
-    public Vector2 mapMax = new Vector2(20, 20);
-    public string obstacleTag = "Wall";
-
-    public float dodgeDistance = 2f;
-    public float dodgeCooldown = 0.6f;
-
-
-    // ============================================================
-    // ★ HP関連
-    // ============================================================
-
-    [Header("HP")]
-    public float life = 10f;
-    public float maxLife = 10f;
-
-
-    // ============================================================
-    // ★ AI Settings
-    // ============================================================
-
-    [Header("AI Settings")]
-    public float detectRange = 24f;
-    public float combatRange = 6f;
-    public float loseSightRange = 40f;
-
-
-    // ============================================================
-    // ★ 吸血AI
-    // ============================================================
-
-    [Header("Absorb HP")]
-    public string batTag = "Bat";
-    public float batSearchRange = 15f;
-    public float absorbHealAmount = 4f;
-
-
-    // ============================================================
-    // ★ 戦闘AI
-    // ============================================================
-
-    [Header("Combat AI")]
-    public float projectileSpeed = 8f;
-    public float shootCooldown = 1.2f;
-    public GameObject projectilePrefab;
-
-
-    // ============================================================
-    // ★ プレイヤー攻撃観察（学習AI）
-    // ============================================================
-
-    [Header("Learning AI (Meta)")]
-    public Collider2D[] playerAttackHitBox;
-    public GameObject[] playerBullets;
-
-
-    // ============================================================
-    // ★ Movement
-    // ============================================================
-
-    public Vector2 speed;
-    public float walkSpeed = 1.2f;
-
-
-    // ============================================================
-    // ★ その他内部状態
-    // ============================================================
-
-    public float stateTimer = 0f;
-    public bool isHitted = false;
-    public bool isInvincible = false;
-    public bool isDead = false;
-
-    public SpriteRenderer sprite;
-    public Rigidbody2D rb;
-    public Animator animator;
-
-    public EnemyComp tool;
-
-    // ============================================================
-    // ★ 旧FSM互換 MoveType（使わないが必須）
-    // ============================================================
-
-    public enum MoveType
-    {
-        Simple = 0,
-        BatAbsorb = 1,
-        VisionSeek = 2,
-        AStarPath = 3,
-        JumpDodge = 4
-    }
-
-    // FSM が参照する現在の移動タイプ（新AIは使用しない）
-    public MoveType moveType = MoveType.Simple;
-
-
-    // ============================================================
-    // ★ FSM互換 State（ブラックボックス用ダミー）
+    // ★ FSM（ブラックボックス）互換ステート
     // ============================================================
 
     public enum State
@@ -128,9 +18,121 @@ public class Soldier : MonoBehaviour
         DEAD
     }
 
+    [HideInInspector] public State currentState = State.WAIT;
+    [HideInInspector] public State nextState = State.WAIT;
+
 
     // ============================================================
-    // ★ 新AIのメインステート
+    // ★ FSM が参照する変数（public 必須だが Inspector 非表示）
+    // ============================================================
+
+    [HideInInspector] public Vector2 speed;
+    [HideInInspector] public bool isHitted;
+    [HideInInspector] public EnemyComp tool;
+    [HideInInspector] public float life;
+    [HideInInspector] public float batSearchRange = 12f;
+    [HideInInspector] public float detectRange = 6f;
+
+    // 旧AI 互換メンバー（FSM が参照する）
+    [HideInInspector] public Vector2 position;
+    [HideInInspector] public bool facingLeft = true;
+    [HideInInspector] public float timer = 0f;
+
+    public float lowHPThreshold = 5f;
+    public float viewAngle = 120f;
+
+    public float gridSize = 0.7f;
+    public Vector2 mapMin = new Vector2(-20, -20);
+    public Vector2 mapMax = new Vector2(20, 20);
+    public string obstacleTag = "Wall";
+
+    public float dodgeDistance = 2f;
+    public float dodgeCooldown = 0.6f;
+
+
+    // ============================================================
+    // ★ MoveType（FSM が参照する）
+    // ============================================================
+
+    public enum MoveType
+    {
+        Simple = 0,
+        BatAbsorb = 1,
+        VisionSeek = 2,
+        AStarPath = 3,
+        JumpDodge = 4
+    }
+    public MoveType moveType = MoveType.Simple;
+
+
+    // ============================================================
+    // ★ Inspector に表示する必要がある設定（private + SerializeField）
+    // ============================================================
+
+    [Header("HP Settings")]
+    [SerializeField] private float maxLife = 10f;
+
+    [Header("Combat Settings")]
+    [SerializeField] private float combatRange = 6f;
+    [SerializeField] private float loseSightRange = 40f;
+
+    [Header("Absorb Settings")]
+    [SerializeField] private string batTag = "Bat";
+    [SerializeField] private float absorbHeal = 4f;
+
+    [Header("Projectile Settings")]
+    [SerializeField] private GameObject projectilePrefab;
+    [SerializeField] private float projectileSpeed = 8f;
+    [SerializeField] private float projectileCD = 1.2f;
+
+    [Header("Meta AI - Player Attack Detection")]
+    [SerializeField] private Collider2D[] playerAttackHitBoxes;
+    [SerializeField] private string bulletDetectName = "Bullet";
+
+    [Header("NPC Walk Settings")]
+    [SerializeField] private float walkSpeed = 1.2f;
+
+
+    // ============================================================
+    // ★ 内部専用（Inspector 非表示）
+    // ============================================================
+
+    private Rigidbody2D rb;
+    private SpriteRenderer sprite;
+    private Animator animator;
+    private bool isDead = false;
+    private bool isInvincible = false;
+
+    private Transform player;
+    private Vector2 lastPlayerPos;
+
+    // Meta Learning AI
+    private float sampleCount = 1;
+    private float atkCount = 0;
+    private float runCount = 0;
+    private float jumpCount = 0;
+
+    // AI パラメータに反映
+    private float aggression = 1f;
+    private float dodgeRate = 1f;
+    private float feintRate = 1f;
+
+    // Fear AI
+    private float fear = 0f;
+    private float fearThreshold = 1.4f;
+    private float fearIncreaseRate = 1.5f;
+    private float fearDecreaseRate = 0.8f;
+
+    // NPC 歩行AI
+    private bool idleWalking = false;
+    private float idleWalkTimer = 0f;
+
+    // 射撃管理
+    private float nextShootTime = 0f;
+
+
+    // ============================================================
+    // ★ 高レベル AI ステート（あなたの最新AI）
     // ============================================================
 
     public enum HighState
@@ -144,11 +146,6 @@ public class Soldier : MonoBehaviour
     }
     public HighState highState = HighState.IDLE;
 
-
-    // ============================================================
-    // ★ 戦闘サブステート
-    // ============================================================
-
     public enum CombatState
     {
         APPROACH,
@@ -158,45 +155,12 @@ public class Soldier : MonoBehaviour
         BEHIND,
         ADAPT
     }
-    CombatState combatState = CombatState.APPROACH;
+    private CombatState combatState = CombatState.APPROACH;
 
 
     // ============================================================
-    // ★ プレイヤー情報
+    // Start
     // ============================================================
-
-    Transform player;
-    Vector2 lastPlayerPos;
-
-
-    // ============================================================
-    // ★ Meta学習パラメータ
-    // ============================================================
-
-    float sampleCount = 1;
-    float atkCount = 0;
-    float runCount = 0;
-    float jumpCount = 0;
-
-    float aggression = 1f;
-    float dodgeRate = 1f;
-    float feintRate = 1f;
-
-    float fear = 0f;
-    float fearThreshold = 1.4f;
-    float fearIncreaseRate = 1.5f;
-    float fearDecreaseRate = 0.8f;
-
-    float idleWalkTimer = 0f;
-    bool idleWalking = false;
-
-    float nextShootTime = 0f;
-
-
-    // ============================================================
-    // ★ Start
-    // ============================================================
-
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
@@ -206,27 +170,31 @@ public class Soldier : MonoBehaviour
         tool = new EnemyComp(this.gameObject);
 
         player = GameObject.FindGameObjectWithTag("Player")?.transform;
-
         if (player != null)
             lastPlayerPos = player.position;
 
-        maxLife = life;
+        life = maxLife;
+
+        // 🔥 ここに追加！
+        detectRange *= 2f;
+        combatRange *= 2f;
     }
 
-
     // ============================================================
-    // ★ Update
+    // Update（高レベルAI・MetaAI・FSM互換更新）
     // ============================================================
 
     void Update()
     {
-        if (isDead || player == null) return;
+        if (isDead) return;
+        if (player == null) return;
 
-        // 旧FSM互換の毎フレーム更新
+        // FSM互換更新
         position = transform.position;
         facingLeft = sprite.flipX;
         timer += Time.deltaTime;
 
+        // MetaAI（プレイヤー行動解析）
         Meta_ObservePlayer();
 
         float dist = Vector2.Distance(transform.position, player.position);
@@ -244,24 +212,23 @@ public class Soldier : MonoBehaviour
 
 
     // ============================================================
-    // ★ IDLE（NPC歩行）
+    // ★ IDLE（通常NPC歩行 + プレイヤー認知）
     // ============================================================
 
     void State_IDLE(float dist)
     {
-        stateTimer += Time.deltaTime;
         NPCWalkBehaviour();
 
         if (dist < detectRange)
         {
             highState = HighState.ALERT;
-            stateTimer = 0;
+            timer = 0;
         }
     }
 
 
     // ============================================================
-    // ★ ALERT（警戒）
+    // ★ ALERT（警戒状態：恐怖AIで後退もあり）
     // ============================================================
 
     void State_ALERT(float dist)
@@ -270,22 +237,23 @@ public class Soldier : MonoBehaviour
 
         if (Fear_Update())
         {
+            // 恐怖による一時後退
             Vector2 away = (transform.position - player.position).normalized;
             speed = away * 2f;
         }
 
-        if (stateTimer > 0.5f)
+        timer += Time.deltaTime;
+
+        if (timer > 0.5f)
         {
             highState = HighState.CHASE;
-            stateTimer = 0;
+            timer = 0;
         }
-
-        stateTimer += Time.deltaTime;
     }
 
 
     // ============================================================
-    // ★ CHASE（追跡）
+    // ★ CHASE（プレイヤー追跡）
     // ============================================================
 
     void State_CHASE(float dist)
@@ -296,47 +264,48 @@ public class Soldier : MonoBehaviour
         if (dist < combatRange)
         {
             highState = HighState.COMBAT;
-            stateTimer = 0;
+            timer = 0;
         }
 
         if (dist > loseSightRange)
         {
             highState = HighState.SEARCH;
-            stateTimer = 0;
+            timer = 0;
         }
     }
 
 
     // ============================================================
-    // ★ SEARCH（捜索）
+    // ★ SEARCH（プレイヤー見失い → 探索移動）
     // ============================================================
 
     void State_SEARCH(float dist)
     {
-        stateTimer += Time.deltaTime;
+        timer += Time.deltaTime;
 
         Vector2 dir = (lastPlayerPos - (Vector2)transform.position).normalized;
         speed = dir * 1.5f;
 
+        // ランダムな方向転換で探索らしさを演出
         if (Random.value < 0.02f)
             sprite.flipX = !sprite.flipX;
 
         if (dist < detectRange)
         {
             highState = HighState.ALERT;
-            stateTimer = 0;
+            timer = 0;
         }
 
-        if (stateTimer > 10f)
+        if (timer > 10f)
         {
             highState = HighState.IDLE;
-            stateTimer = 0;
+            timer = 0;
         }
     }
 
 
     // ============================================================
-    // ★ ABSORB（吸血）
+    // ★ ABSORB（低HP → コウモリ瞬間移動吸血）
     // ============================================================
 
     void State_ABSORB(float dist)
@@ -346,15 +315,17 @@ public class Soldier : MonoBehaviour
         GameObject bat = FindNearestBat();
         if (bat != null)
         {
+            // コウモリへ瞬間移動
             transform.position = bat.transform.position;
             Destroy(bat);
 
-            life = Mathf.Min(maxLife, life + absorbHealAmount);
+            life = Mathf.Min(maxLife, life + absorbHeal);
 
             highState = HighState.ALERT;
             return;
         }
 
+        // コウモリがいない → プレイヤー背後に瞬間移動昏倒吸血
         if (dist < 3f)
         {
             Vector3 p = player.position;
@@ -362,25 +333,27 @@ public class Soldier : MonoBehaviour
 
             transform.position = new Vector3(p.x + dx, p.y, p.z);
 
-            life = Mathf.Min(maxLife, life + absorbHealAmount);
+            life = Mathf.Min(maxLife, life + absorbHeal);
 
             highState = HighState.COMBAT;
             return;
         }
 
+        // 吸血距離まで接近
         Vector2 d2 = (player.position - transform.position).normalized;
         speed = d2 * 2f;
     }
 
 
     // ============================================================
-    // ★ COMBAT（戦闘AI）
+    // ★ COMBAT（戦闘AI 中核）
     // ============================================================
 
     void State_COMBAT(float dist)
     {
         lastPlayerPos = player.position;
 
+        // 戦闘距離外 → 接近
         if (dist > combatRange)
         {
             Vector2 dir = (player.position - transform.position).normalized;
@@ -391,6 +364,7 @@ public class Soldier : MonoBehaviour
             speed = Vector2.zero;
         }
 
+        // 戦闘サブステートの振り分け
         switch (combatState)
         {
             case CombatState.APPROACH: Combat_Approach(dist); break;
@@ -401,57 +375,68 @@ public class Soldier : MonoBehaviour
             case CombatState.ADAPT: Combat_Adapt(dist); break;
         }
 
+        // 見失ったら SEARCH
         if (dist > loseSightRange)
         {
             highState = HighState.SEARCH;
-            stateTimer = 0;
             return;
         }
 
+        // HP 半分以下 → 吸血へ
         if (life < maxLife * 0.5f)
         {
             highState = HighState.ABSORB;
             return;
         }
 
+        // 次の戦闘ステート選択
         Combat_SelectNextState(dist);
     }
+    // ============================================================
+    // ★ COMBAT サブステート実装
+    // ============================================================
 
-
-    // ===== Approach
+    // --- 接近 ---
     void Combat_Approach(float dist)
     {
         if (dist > 4f)
             speed = (player.position - transform.position).normalized * (2.5f * aggression);
     }
 
-    // ===== Evade
+    // --- 回避（弾・プレイヤー攻撃） ---
     void Combat_Evade(float dist)
     {
         Vector2 avoid;
 
+        // 弾が近い → 即回避
         if (IsBulletNear(out avoid))
+        {
             PerformDodge(avoid);
+        }
         else
+        {
             PerformDodge((transform.position - player.position).normalized);
+        }
 
         combatState = CombatState.APPROACH;
     }
 
-    // ===== Shoot
+    // --- 射撃 ---
     void Combat_Shoot(float dist)
     {
-        if (Time.time > nextShootTime)
+        if (Time.time >= nextShootTime)
         {
             ShootProjectile();
-            nextShootTime = Time.time + (shootCooldown / aggression);
+            nextShootTime = Time.time + (projectileCD / aggression);
         }
+
         combatState = CombatState.APPROACH;
     }
 
-    // ===== Feint
+    // --- フェイント攻撃 ---
     void Combat_Feint(float dist)
     {
+        // フェイント動き（横ステップ）
         if (Random.value < 0.5f)
         {
             Vector2 perp = Vector2.Perpendicular(player.position - transform.position).normalized;
@@ -460,23 +445,27 @@ public class Soldier : MonoBehaviour
         }
         else
         {
-            if (animator != null)
-                animator.SetTrigger("Attack");
+            // 射撃フェイント（タイミングずらし）
+            if (Time.time > nextShootTime)
+            {
+                ShootProjectile();
+                nextShootTime = Time.time + (projectileCD * 0.8f);
+            }
         }
+
         combatState = CombatState.APPROACH;
     }
-
-    // ===== Behind
+    // --- 背後取り（瞬間移動） ---
     void Combat_Behind(float dist)
     {
         Vector3 p = player.position;
         float offset = (player.localScale.x > 0) ? -1.2f : 1.2f;
-        transform.position = new Vector3(p.x + offset, p.y, p.z);
 
+        transform.position = new Vector3(p.x + offset, p.y, p.z);
         combatState = CombatState.APPROACH;
     }
 
-    // ===== Adapt
+    // --- 学習AIによる適応行動 ---
     void Combat_Adapt(float dist)
     {
         float atkRate = atkCount / sampleCount;
@@ -492,13 +481,14 @@ public class Soldier : MonoBehaviour
 
 
     // ============================================================
-    // ★ 戦闘ステート選択
+    // ★ 次の戦闘サブステートを選ぶ
     // ============================================================
 
     void Combat_SelectNextState(float dist)
     {
         float r = Random.value;
 
+        // 弾回避優先
         Vector2 dummy;
         if (IsBulletNear(out dummy))
         {
@@ -506,24 +496,24 @@ public class Soldier : MonoBehaviour
             return;
         }
 
+        // 射程外 → 接近 or 射撃
         if (dist > combatRange)
         {
             combatState = (Random.value < 0.6f) ? CombatState.APPROACH : CombatState.SHOOT;
             return;
         }
 
+        // 近距離 → フェイント・背後取り・射撃
         if (dist < 3f)
         {
-            if (r < 0.3f * feintRate)
-                combatState = CombatState.FEINT;
-            else if (r < 0.5f * feintRate)
-                combatState = CombatState.BEHIND;
-            else
-                combatState = CombatState.SHOOT;
+            if (r < 0.3f * feintRate) combatState = CombatState.FEINT;
+            else if (r < 0.5f * feintRate) combatState = CombatState.BEHIND;
+            else combatState = CombatState.SHOOT;
 
             return;
         }
 
+        // 中距離 → 多彩な行動
         if (r < 0.5f * aggression) combatState = CombatState.SHOOT;
         else if (r < 0.75f * dodgeRate) combatState = CombatState.EVADE;
         else if (r < 0.9f * feintRate) combatState = CombatState.FEINT;
@@ -532,7 +522,7 @@ public class Soldier : MonoBehaviour
 
 
     // ============================================================
-    // ★ Meta学習
+    // ★ Meta AI：プレイヤー行動の観察（学習AI）
     // ============================================================
 
     void Meta_ObservePlayer()
@@ -542,10 +532,11 @@ public class Soldier : MonoBehaviour
         Vector2 now = player.position;
         Vector2 delta = now - lastPlayerPos;
 
-        if (delta.magnitude > 0.1f) runCount++;
+        if (delta.magnitude > 0.15f) runCount++;
         if (delta.y > 0.15f) jumpCount++;
 
-        foreach (var hb in playerAttackHitBox)
+        // 攻撃検知
+        foreach (var hb in playerAttackHitBoxes)
         {
             if (hb != null && hb.enabled)
             {
@@ -559,7 +550,7 @@ public class Soldier : MonoBehaviour
 
 
     // ============================================================
-    // ★ 恐怖AI
+    // ★ Fear AI（恐怖による後退）
     // ============================================================
 
     bool Fear_Update()
@@ -576,12 +567,13 @@ public class Soldier : MonoBehaviour
 
 
     // ============================================================
-    // ★ NPC歩行
+    // ★ NPC（非戦闘）歩行AI
     // ============================================================
 
     void NPCWalkBehaviour()
     {
         idleWalkTimer -= Time.deltaTime;
+
         if (idleWalkTimer <= 0)
         {
             idleWalking = !idleWalking;
@@ -590,7 +582,7 @@ public class Soldier : MonoBehaviour
 
         if (idleWalking)
         {
-            float dir = (Random.value < 0.5f) ? -1f : 1f;
+            float dir = Random.value < 0.5f ? -1f : 1f;
             speed = new Vector2(dir * walkSpeed, 0);
         }
         else
@@ -601,52 +593,39 @@ public class Soldier : MonoBehaviour
 
 
     // ============================================================
-    // ★ 弾回避AI
+    // ★ 弾回避判定
     // ============================================================
 
     bool IsBulletNear(out Vector2 avoidDir)
     {
         avoidDir = Vector2.zero;
 
-        Rigidbody2D[] all = GameObject.FindObjectsOfType<Rigidbody2D>();
+        Rigidbody2D[] bodies = GameObject.FindObjectsOfType<Rigidbody2D>();
 
-        foreach (Rigidbody2D body in all)
+        foreach (var b in bodies)
         {
-            if (body == null) continue;
+            if (b == null) continue;
+            if (!b.gameObject.name.Contains(bulletDetectName)) continue;
 
-            foreach (var bullet in playerBullets)
+            float d = Vector2.Distance(transform.position, b.transform.position);
+
+            if (d < 2.5f)
             {
-                if (bullet == null) continue;
-
-                if (body.gameObject.name.Contains(bullet.name))
-                {
-                    float d = Vector2.Distance(transform.position, body.transform.position);
-
-                    if (d < 2.5f)
-                    {
-                        avoidDir = (transform.position - body.transform.position).normalized;
-                        return true;
-                    }
-                }
+                avoidDir = (transform.position - b.transform.position).normalized;
+                return true;
             }
         }
+
         return false;
     }
-
-
-    // ============================================================
-    // ★ Dodge（回避）
-    // ============================================================
 
     void PerformDodge(Vector2 dir)
     {
         float power = 6f * dodgeRate;
         rb.AddForce(dir.normalized * power, ForceMode2D.Impulse);
     }
-
-
     // ============================================================
-    // ★ 射撃
+    // ★ 射撃攻撃
     // ============================================================
 
     void ShootProjectile()
@@ -654,34 +633,31 @@ public class Soldier : MonoBehaviour
         if (projectilePrefab == null) return;
 
         Vector2 dir = (player.position - transform.position).normalized;
-
         GameObject proj = Instantiate(
             projectilePrefab,
             transform.position + new Vector3(dir.x * 0.4f, 0, 0),
             Quaternion.identity
         );
 
-        Rigidbody2D prb = proj.GetComponent<Rigidbody2D>();
-        if (prb != null)
-            prb.linearVelocity = dir * projectileSpeed;
+        Rigidbody2D rbProj = proj.GetComponent<Rigidbody2D>();
+        if (rbProj != null)
+            rbProj.linearVelocity = dir * projectileSpeed;
     }
 
 
     // ============================================================
-    // ★ Bat探索
+    // ★ Bat（コウモリ）探索
     // ============================================================
 
     GameObject FindNearestBat()
     {
         GameObject[] bats = GameObject.FindGameObjectsWithTag(batTag);
-
         GameObject best = null;
         float bestDist = batSearchRange;
 
         foreach (var b in bats)
         {
             float d = Vector2.Distance(transform.position, b.transform.position);
-
             if (d < bestDist)
             {
                 bestDist = d;
@@ -696,12 +672,13 @@ public class Soldier : MonoBehaviour
     // ★ ダメージ処理
     // ============================================================
 
-    public void ApplyDamage(float dmg)
+    public void ApplyDamage(float damage)
     {
         if (isInvincible || isDead) return;
 
-        life -= dmg;
+        life -= damage;
 
+        // ノックバック
         Vector2 knock = (transform.position - player.position).normalized * 2.2f;
         rb.AddForce(knock, ForceMode2D.Impulse);
 
@@ -729,13 +706,13 @@ public class Soldier : MonoBehaviour
     IEnumerator DeathRoutine()
     {
         speed = Vector2.zero;
-        yield return new WaitForSeconds(1.0f);
+        yield return new WaitForSeconds(1f);
         Delete();
     }
 
 
     // ============================================================
-    // ★ Movement（FSMより優先）
+    // ★ Movement（FSM互換 / Rigidbody2D）
     // ============================================================
 
     void FixedUpdate()
@@ -756,17 +733,42 @@ public class Soldier : MonoBehaviour
 
 
     // ============================================================
-    // ★ FSM互換ダミー関数
+    // ★ FSM 用ダミーアクション（FSMから呼ばれるので必須）
     // ============================================================
 
     public void WaitAction() { }
     public void RunAction() { }
-    public void AttackAction() { }
-    public void RangeAttackAction() { }
+    // ============================================================
+    // 近距離攻撃（廃止）
+    // ============================================================
+
+    // 近距離攻撃廃止
+    public void AttackAction()
+    {
+        // 何もしない（FSM安全対策）
+    }
+
+    // 近距離攻撃ヒット無効化
+    void MakeAttackHit()
+    {
+        // 完全に機能停止
+        return;
+    }
+
+
+    // ============================================================
+    // 遠距離攻撃（射撃アクション）
+    // ============================================================
+
+    public void RangeAttackAction()
+    {
+        ShootProjectile();
+    }
+
+
     public void DeadAction()
     {
-        if (animator != null)
-            animator.SetBool("IsDead", true);
+        animator?.SetBool("IsDead", true);
     }
 
     public void Delete()
@@ -776,17 +778,70 @@ public class Soldier : MonoBehaviour
 
 
     // ============================================================
-    // ★ Gizmos
+    // ★ Debug Gizmos
     // ============================================================
-
     void OnDrawGizmosSelected()
     {
-        if (!Application.isPlaying) return;
+        if (!Application.isPlaying)
+        {
+            // ゲーム停止中でも範囲を見たい場合
+            DrawGizmosStatic();
+            return;
+        }
 
+        DrawGizmosStatic();
+    }
+
+    void DrawGizmosStatic()
+    {
+        // ===========================================
+        // ★ 1. 索敵範囲（黄色）
+        // ===========================================
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, detectRange);
 
+        // ===========================================
+        // ★ 2. 戦闘範囲（赤）
+        // ===========================================
         Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(transform.position, combatRange);
+
+        // ===========================================
+        // ★ 3. 視野角（青の扇形）
+        // ===========================================
+        Gizmos.color = Color.cyan;
+
+        Vector3 forwardDir = facingLeft ? Vector3.left : Vector3.right;
+
+        int segments = 32;
+        float halfAngle = viewAngle * 0.5f;
+
+        Vector3 prevPoint = Vector3.zero;
+        bool first = true;
+
+        for (int i = 0; i <= segments; i++)
+        {
+            float angle = -halfAngle + (viewAngle * i / segments);
+            float rad = angle * Mathf.Deg2Rad;
+
+            Vector3 dir = Quaternion.Euler(0, 0, angle) * forwardDir;
+            Vector3 point = transform.position + dir * detectRange;
+
+            if (!first)
+                Gizmos.DrawLine(prevPoint, point);
+
+            prevPoint = point;
+            first = false;
+        }
+
+        // 視界の中心線
+        Gizmos.color = Color.blue;
+        Gizmos.DrawLine(transform.position, transform.position + forwardDir * detectRange);
+
+        // ===========================================
+        // ★ 4. 現在向いている方向を示す白線
+        // ===========================================
+        Gizmos.color = Color.white;
+        Gizmos.DrawLine(transform.position, transform.position + forwardDir * 1.5f);
     }
 }
