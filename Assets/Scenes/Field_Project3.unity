@@ -887,7 +887,7 @@ PrefabInstance:
     - target: {fileID: 114743086845943066, guid: d975e66254b08984ab50d4c39dcb947f, type: 3}
       propertyPath: Target
       value: 
-      objectReference: {fileID: 4660077107968324}
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -3237,7 +3237,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 93c58048d8f598841a8a21015e663d6c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  player: {fileID: 1377239248073422}
+  player: {fileID: 0}
   allyPrefab: {fileID: 6883475689770012661, guid: 9383784e0b15a5c4cb75abb2684109de, type: 3}
   spawnPoint: {fileID: 0}
 --- !u!4 &2026918211
@@ -3484,7 +3484,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4273834578559770477, guid: f7dc6f07cc6c9f94c9aed2d9a56e5577, type: 3}
       propertyPath: enragedHpRatio
-      value: 1
+      value: 0.5
       objectReference: {fileID: 0}
     - target: {fileID: 4273834578559770477, guid: f7dc6f07cc6c9f94c9aed2d9a56e5577, type: 3}
       propertyPath: enragedMoveSpeed

@@ -51,26 +51,38 @@ public class Attack : MonoBehaviour
 
         if (Input.GetButtonDown("Skill1") && canAttack)
         {
-            canAttack = false;
-            animator.SetBool("Skill1", true);
-            StartCoroutine(AttackCooldown(0.5f, "Skill1"));
-            Skill1Logic();
+            if(playerMovement.mp >= 30)
+            {
+                canAttack = false;
+                animator.SetBool("Skill1", true);
+                StartCoroutine(AttackCooldown(0.5f, "Skill1"));
+                Skill1Logic();
+                playerMovement.decreaseMP(20);
+            }
         }
 
         if (Input.GetButtonDown("Skill2") && canAttack)
         {
-            canAttack = false;
-            animator.SetBool("Skill2", true);
-            StartCoroutine(AttackCooldown(0.7f, "Skill2"));
-            Skill2Logic();
+            if (playerMovement.mp >= 30)
+            {
+                canAttack = false;
+                animator.SetBool("Skill2", true);
+                StartCoroutine(AttackCooldown(0.7f, "Skill2"));
+                Skill2Logic();
+                playerMovement.decreaseMP(30);
+            }
         }
 
         if (Input.GetButtonDown("Skill3") && canAttack)
         {
-            canAttack = false;
-            animator.SetBool("Skill3", true);
-            StartCoroutine(AttackCooldown(1.0f, "Skill3"));
-            Skill3Logic();
+            if (playerMovement.mp >= 30)
+            {
+                canAttack = false;
+                animator.SetBool("Skill3", true);
+                StartCoroutine(AttackCooldown(1.0f, "Skill3"));
+                Skill3Logic();
+                playerMovement.decreaseMP(30);
+            }
         }
     }
 

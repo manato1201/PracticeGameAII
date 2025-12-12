@@ -3,7 +3,6 @@ using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
-using UnityEngine.UIElements;
 
 public class CharacterController2D : MonoBehaviour
 {
@@ -15,7 +14,8 @@ public class CharacterController2D : MonoBehaviour
     [SerializeField] private Transform m_GroundCheck;
     [SerializeField] private Transform m_WallCheck;
 
-    [SerializeField] private UnityEngine.UI.Slider HPbar;
+    [SerializeField] private Slider HPbar;
+    [SerializeField] private Slider MPbar;
 
     const float k_GroundedRadius = .2f;
     private bool m_Grounded;
@@ -36,6 +36,8 @@ public class CharacterController2D : MonoBehaviour
 
     public float life;
     public float maxlife = 10f;
+    public float mp;
+    private float maxmp = 100;
     public bool invincible = false;
     private bool canMove = true;
 
@@ -69,6 +71,7 @@ public class CharacterController2D : MonoBehaviour
             OnLandEvent = new UnityEvent();
 
         life = maxlife;
+        mp = maxmp;
     }
 
 
@@ -135,6 +138,8 @@ public class CharacterController2D : MonoBehaviour
                 m_Rigidbody2D.linearVelocity = new Vector2(0, m_Rigidbody2D.linearVelocity.y);
             }
         }
+
+        UpdateMPSlider();
     }
 
 
@@ -278,6 +283,12 @@ public class CharacterController2D : MonoBehaviour
         UpdateHPSlider();
     }
 
+    public void decreaseMP(float amount)
+    {
+        mp -= amount;
+        if(mp <= 0) mp=0;
+    }
+
     IEnumerator DashCooldown()
     {
         animator.SetBool("IsDashing", true);
@@ -343,6 +354,19 @@ public class CharacterController2D : MonoBehaviour
         {
             HPbar.maxValue = maxlife;
             HPbar.value = life;
+        }
+    }
+
+    public void UpdateMPSlider()
+    {
+        if (MPbar != null)
+        {
+            MPbar.maxValue = maxmp;
+            MPbar.value = mp;
+            mp += Time.deltaTime * 7.0f;
+            mp = Mathf.Clamp(mp, 0, maxmp);
+
+            MPbar.value = mp; 
         }
     }
 
