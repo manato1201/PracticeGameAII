@@ -4,92 +4,57 @@ using UnityEngine;
 
 public class Soldier : MonoBehaviour
 {
-    // ============================================================
-    // ★ 基本パラメータ（旧AI + 新AI 両対応仕様）
-    // ============================================================
-    public float life = 10f;
-    public float maxLife;
+    // ===================================================
+    //  基礎パラメータ（Inspector 表示は必要最小限）
+    // ===================================================
 
-    public bool isHitted = false;
-    private bool isInvincible = false;
-
-    public Vector2 speed = Vector2.zero;        // FSMが参照する
-    public Vector2 position;                    // FSMが参照する
-    public float timer;                         // VisionSeekで使用
-
-    public bool facingLeft = true;
-
-    Rigidbody2D rb;
-    Animator animator;
-    UnityEngine.Transform attackCheck;
-
-
-    // ============================================================
-    // ★ FSM が必要とする旧AIパラメータ（完全復活）
-    // ============================================================
-    [Header("Old AI Settings (for FSM compatibility)")]
-    public float lowHPThreshold = 5f;
-    public float batSearchRange = 12f;
-
-    public float detectRange = 6f;
-    public float attackRange = 1.2f;
-    public float viewAngle = 120f;
-
-    public float gridSize = 0.7f;
-    public Vector2 mapMin = new Vector2(-20, -20);
-    public Vector2 mapMax = new Vector2(20, 20);
-    public string obstacleTag = "Wall";
-
-    public EnemyComp tool;                      // FSM が使用
-    public bool leader;                         // チームAI
-    public int set;                             // チームAI
-    public Soldier[] teamMember;                // チームAI
-
-    public GameObject throwableObject;          // RangeAttackで使用
-
-
-    // ============================================================
-    // ★ moveType（旧AIの状態管理）
-    // ============================================================
-    public enum MoveType
+    [SerializeField] private float _life = 10f;
+    public float life
     {
-        Simple = 0,     // ★ 新AI（プロゲーマーAI）はここで動作
-        BatAbsorb = 1,
-        VisionSeek = 2,
-        AStarPath = 3,
-        JumpDodge = 4,
+        get => _life;
+        set => _life = value;
     }
-    public MoveType moveType = MoveType.Simple;
 
+    [SerializeField] private GameObject throwableObject;
+    [SerializeField] private GameObject player;
 
-    // ============================================================
-    // ★ プロゲーマーAI（新AI）のパラメータ
-    // ============================================================
-    [Header("Pro Gamer AI Settings")]
-    public GameObject player;
+    [HideInInspector] public bool isHitted = false;
 
-    public List<GameObject> playerBulletPrefabs;
-    public List<Collider2D> playerAttackHitBoxes;
+    [HideInInspector] public float maxLife = 10f;
 
-    public float dodgeDistance = 2.5f;
-    public float dodgeCooldown = 0.8f;
-    public float behindTeleportCooldown = 2.0f;
-    public float feintChance = 0.25f;
-    public float retreatHPThreshold = 0.3f;
-    public float retreatDistance = 4.0f;
-    public float attackDelayMin = 0.1f;
-    public float attackDelayMax = 0.35f;
+    public Vector2 position => transform.position;
 
-    float nextDodgeTime = 0f;
-    float nextBehindTime = 0f;
+    // ===================================================
+    //  FSM が必要とするパラメータ（Inspector 非表示）
+    // ===================================================
+    [HideInInspector] public float lowHPThreshold = 5f;
+    [HideInInspector] public float detectRange = 12f;
+    [HideInInspector] public float viewAngle = 120f;
 
-    public bool ai_forceAttack = false;
-    public bool ai_retreating = false;
+    [HideInInspector] public float batSearchRange = 24f;
 
+    [HideInInspector] public float gridSize = 0.7f;
+    [HideInInspector] public Vector2 mapMin = new Vector2(-20, -20);
+    [HideInInspector] public Vector2 mapMax = new Vector2(20, 20);
+    [HideInInspector] public string obstacleTag = "Wall";
 
-    // ============================================================
-    // ★ ステートマシン基盤
-    // ============================================================
+    [HideInInspector] public float dodgeDistance = 2f;
+    [HideInInspector] public float dodgeCooldown = 0.6f;
+
+    // ===================================================
+    //  移動系
+    // ===================================================
+
+    [HideInInspector] public Vector2 speed = Vector2.zero;
+    private Rigidbody2D rb;
+
+    [HideInInspector] public bool facingLeft = true;
+
+    [HideInInspector] public float timer = 0f;
+
+    // ===================================================
+    //  FSM ステート
+    // ===================================================
     public enum State
     {
         WAIT,
@@ -97,36 +62,43 @@ public class Soldier : MonoBehaviour
         MELEE_ATTACK,
         RANGE_ATTACK,
         DAMAGE,
-        DEAD,
+        DEAD
     }
-    State currentState;
 
-    List<Soldier_FSM_Base> availableStates = new List<Soldier_FSM_Base>();
+    private State currentState = State.WAIT;
 
-    Coroutine hitCoroutine;
-    // ============================================================
-    // Start
-    // ============================================================
+    private List<Soldier_FSM_Base> availableStates = new List<Soldier_FSM_Base>();
+
+    // FSM 用 EnemyComp
+    [HideInInspector] public EnemyComp tool;
+
+    // MoveType（FSM 互換のため復元）
+    public enum MoveType
+    {
+        Simple = 0,
+        BatAbsorb = 1,
+        VisionSeek = 2,
+        AStarPath = 3,
+        JumpDodge = 4
+    }
+    [HideInInspector] public MoveType moveType = MoveType.Simple;
+
+    // Animator
+    private Animator animator;
+
+    // ===================================================
+    //  Start
+    // ===================================================
     void Start()
     {
-        maxLife = life;
-
         rb = GetComponent<Rigidbody2D>();
         animator = GetComponent<Animator>();
-        attackCheck = transform.Find("AttackCheck");
 
-        // EnemyComp（旧AI互換）
-        tool = new EnemyComp(this.gameObject);
+        tool = new EnemyComp(gameObject);
 
-        // チームメンバー読み取り（旧AI互換）
-        GameObject[] allies = tool.GetSinblings();
-        teamMember = new Soldier[allies.Length];
-        for (int i = 0; i < allies.Length; i++)
-        {
-            teamMember[i] = allies[i].GetComponent<Soldier>();
-        }
+        maxLife = life;
 
-        // FSM状態追加
+        // FSM 登録
         availableStates.Add(new Soldier_FSM_Wait(this));
         availableStates.Add(new Soldier_FSM_Run(this));
         availableStates.Add(new Soldier_FSM_Attack(this));
@@ -138,33 +110,24 @@ public class Soldier : MonoBehaviour
         availableStates[(int)currentState].OnEnter();
     }
 
-
-    // ============================================================
-    // Update
-    // ============================================================
+    // ===================================================
+    //  Update（FSM → AI → Movement）
+    // ===================================================
     void Update()
     {
-        UpdatePositionInfo();
+        timer += Time.deltaTime;
 
-        // ★ 新AIは moveType.Simple のときのみ有効化
-        if (currentState == State.RUN && moveType == MoveType.Simple)
-        {
-            ProGamerAI_Update();
-        }
-
-        // FSMの遷移処理
-        State nextState = availableStates[(int)currentState].CheckTransitions();
+        // FSM 判定
+        State next = availableStates[(int)currentState].CheckTransitions();
 
         if (life <= 0 && currentState != State.DEAD)
-        {
-            nextState = State.DEAD;
-        }
+            next = State.DEAD;
 
-        if (nextState != currentState)
+        if (next != currentState)
         {
             availableStates[(int)currentState].OnExit();
-            availableStates[(int)nextState].OnEnter();
-            currentState = nextState;
+            currentState = next;
+            availableStates[(int)currentState].OnEnter();
         }
 
         availableStates[(int)currentState].OnUpdate();
@@ -172,392 +135,327 @@ public class Soldier : MonoBehaviour
         Movement();
     }
 
-
-    // ============================================================
-    // Position & Movement
-    // ============================================================
-    void UpdatePositionInfo()
-    {
-        position = transform.position;
-        speed = rb.linearVelocity;
-    }
-
+    // ===================================================
+    // Movement
+    // ===================================================
     void Movement()
     {
         GetComponent<SpriteRenderer>().flipX = !facingLeft;
         rb.linearVelocity = speed;
     }
-
-
-    // ============================================================
-    // FSM Action Methods
-    // ============================================================
-    public void WaitAction()
+    // ===================================================
+    //  ダメージ処理（FSM 互換）
+    // ===================================================
+    public void ApplyDamage(float damage)
     {
-        animator.SetBool("Run", false);
+        life -= damage;
+
+        if (life <= 0)
+        {
+            life = 0;
+            return;
+        }
+
+        isHitted = true;
+        StartCoroutine(HitRecover());
     }
 
-    public void RunAction()
+    IEnumerator HitRecover()
     {
-        animator.SetBool("Run", true);
+        yield return new WaitForSeconds(0.3f);
+        isHitted = false;
     }
 
+    // ===================================================
+    //  攻撃アクション（近距離攻撃は削除 → 空処理）
+    // ===================================================
     public void AttackAction()
     {
-        animator.SetBool("Run", false);
-        animator.SetTrigger("Attack");
-        MakeAttackHit();
+        // 旧FSMが呼ぶが、近距離攻撃は廃止しているため何もしない
     }
 
+    // ===================================================
+    //  射撃攻撃（遠距離攻撃のみ有効）
+    // ===================================================
     public void RangeAttackAction()
     {
-        animator.SetBool("Run", false);
-        MakeShot(facingLeft);
+        if (throwableObject == null) return;
+
+        float offset = facingLeft ? -0.5f : 0.5f;
+        float bulletSpeed = facingLeft ? -0.5f : 0.5f;
+
+        GameObject proj = Instantiate(
+            throwableObject,
+            transform.position + new Vector3(offset, -0.2f, 0),
+            Quaternion.identity
+        );
+
+        ThrowableProjectile tp = proj.GetComponent<ThrowableProjectile>();
+        tp.owner = gameObject;
+        tp.direction = new Vector2(bulletSpeed, 0);
     }
 
+    // ===================================================
+    //  バット検索（FSM 互換）
+    // ===================================================
+    public GameObject FindNearestBat()
+    {
+        GameObject[] bats = GameObject.FindGameObjectsWithTag("Bat");
+        if (bats.Length == 0) return null;
+
+        float best = float.MaxValue;
+        GameObject nearest = null;
+
+        foreach (GameObject b in bats)
+        {
+            if (b == null) continue;
+
+            float d = Vector2.Distance(transform.position, b.transform.position);
+            if (d < best)
+            {
+                best = d;
+                nearest = b;
+            }
+        }
+        return nearest;
+    }
+
+    // ===================================================
+    //  吸血行動（瞬間移動 → HP回復）
+    // ===================================================
+    public void AbsorbBatAndHeal(GameObject bat)
+    {
+        if (bat == null) return;
+
+        transform.position = bat.transform.position;
+
+        life = Mathf.Min(maxLife, life + 5f);
+
+        Destroy(bat);
+    }
+
+    // ===================================================
+    //  ここから FSM 互換レイヤー（旧API）
+    // ===================================================
+
+    // FSM Wait → Soldier.WaitAction()
+    public void WaitAction()
+    {
+        if (animator != null)
+            animator.SetBool("Run", false);
+    }
+
+    // FSM Run → Soldier.RunAction()
+    public void RunAction()
+    {
+        if (animator != null)
+            animator.SetBool("Run", true);
+    }
+
+    // FSM Dead → Soldier.DeadAction()
     public void DeadAction()
     {
-        animator.SetBool("IsDead", true);
-        ChangeBodyHitToDead();
+        if (animator != null)
+            animator.SetBool("IsDead", true);
     }
 
+    // Dead 後に呼ばれる
     public void Delete()
     {
         Destroy(gameObject);
     }
-    // ============================================================
-    // ★ プロゲーマーAIのメイン処理（RUNステートで実行）
-    // ============================================================
+    // ===================================================
+    //  Meta AI（索敵 → 警戒 → 戦闘）
+    // ===================================================
+
+    private Vector3 lastKnownPlayerPos;
+    private bool searchingPlayer = false;
+
     void ProGamerAI_Update()
     {
-        // ★ player が割り当てられていない or 破棄されている場合は停止
-        if (player == null || player.Equals(null))
-            return;
+        if (player == null) return;
 
-        // transform アクセス前にさらにガード
-        if (player.transform == null)
-            return;
-        float dist = Vector2.Distance(transform.position, player.transform.position);
+        Vector2 soldierPos = transform.position;
+        Vector2 pPos = player.transform.position;
+        float dist = Vector2.Distance(soldierPos, pPos);
 
-        // -----------------------------
-        // ① HP低下で撤退行動
-        // -----------------------------
-        if (life < maxLife * retreatHPThreshold)
+        // ---------------------------------------------------
+        // 1. 索敵圏外 → NPC のような通常行動
+        // ---------------------------------------------------
+        if (dist > detectRange)
         {
-            RetreatFromPlayer();
+            NPC_Walk();
+            searchingPlayer = false;
             return;
         }
 
-        // -----------------------------
-        // ② プレイヤー弾を検知 → 即時回避
-        // -----------------------------
-        if (IsBulletNear(out Vector2 avoidDir))
-        {
-            PerformDodge(avoidDir);
-            return;
-        }
+        // ---------------------------------------------------
+        // 2. プレイヤー発見（警戒状態）
+        // ---------------------------------------------------
+        lastKnownPlayerPos = pPos;
+        searchingPlayer = true;
 
-        // -----------------------------
-        // ③ プレイヤー攻撃HitBox → 即時回避
-        // -----------------------------
-        if (IsPlayerAttacking())
-        {
-            PerformRandomDodge();
-            return;
-        }
+        // 戦闘距離（索敵の 1/2）
+        float combatDist = detectRange * 0.5f;
 
-        // -----------------------------
-        // ④ 背後取り（ランダム＆クールダウンあり）
-        // -----------------------------
-        if (dist < 5f && Time.time > nextBehindTime)
+        if (dist <= combatDist)
         {
-            if (Random.value < 0.1f)
-            {
-                TeleportBehindPlayer();
-                return;
-            }
-        }
-
-        // -----------------------------
-        // ⑤ 間合い管理 + フェイント
-        // -----------------------------
-        if (dist < attackRange)
-        {
-            TryFeintAttack();
-        }
-        else if (dist < 3f)
-        {
-            TryFeintMovement();
+            CombatAI(pPos, dist);
         }
         else
         {
-            ApproachPlayer();
+            ApproachPlayer(pPos);
         }
     }
 
-
-    // ============================================================
-    // プレイヤー攻撃HitBox検知
-    // ============================================================
-    bool IsPlayerAttacking()
+    // ===================================================
+    //  NPC歩行AI（自然な動き）
+    // ===================================================
+    void NPC_Walk()
     {
-        foreach (var hitbox in playerAttackHitBoxes)
+        if (Random.value < 0.005f)
         {
-            if (hitbox != null && hitbox.enabled)
-            {
-                float d = Vector2.Distance(transform.position, hitbox.transform.position);
-                if (d < 2f) return true;
-            }
+            float dir = Random.value < 0.5f ? -1f : 1f;
+            facingLeft = (dir < 0);
+            speed = new Vector2(dir * 1.2f, rb.linearVelocity.y);
+        }
+    }
+
+    // ===================================================
+    //  プレイヤーへ近づく（自然）
+    // ===================================================
+    void ApproachPlayer(Vector2 pPos)
+    {
+        float dir = (pPos.x < transform.position.x) ? -1f : 1f;
+        facingLeft = (dir < 0);
+
+        speed = new Vector2(dir * 2.0f, rb.linearVelocity.y);
+    }
+
+    // ===================================================
+    //  プロAI：間合い管理・攻撃・回避・フェイント
+    // ===================================================
+    void CombatAI(Vector2 pPos, float dist)
+    {
+        float dir = (pPos.x < transform.position.x) ? -1f : 1f;
+        facingLeft = (dir < 0);
+
+        float ideal = detectRange * 0.4f;
+
+        // ---------------------------------------------------
+        // A：間合い管理（プロ AI）
+        // ---------------------------------------------------
+        if (dist < ideal * 0.7f)
+        {
+            // 恐怖で後退
+            speed = new Vector2(-dir * 2f, rb.linearVelocity.y);
+        }
+        else if (dist > ideal * 1.2f)
+        {
+            // 詰める
+            speed = new Vector2(dir * 2.5f, rb.linearVelocity.y);
+        }
+        else
+        {
+            // 射撃姿勢
+            speed = Vector2.zero;
+
+            // フェイント射撃（時々）
+            if (Random.value < 0.02f)
+                RangeAttackAction();
+        }
+
+        // ---------------------------------------------------
+        // B：弾避け（プレイヤー弾が近い）
+        // ---------------------------------------------------
+        if (CheckIncomingBullet())
+            Dodge(dir);
+    }
+
+    // ===================================================
+    //  プレイヤー弾の接近チェック
+    // ===================================================
+    bool CheckIncomingBullet()
+    {
+        GameObject[] bullets = GameObject.FindGameObjectsWithTag("PlayerBullet");
+
+        foreach (GameObject b in bullets)
+        {
+            if (Vector2.Distance(transform.position, b.transform.position) < 3f)
+                return true;
         }
         return false;
     }
 
-
-    // ============================================================
-    // プレイヤー弾の検知（Prefab名一致で判断）
-    // ============================================================
-    bool IsBulletNear(out Vector2 avoidDir)
+    // ===================================================
+    //  回避アクション
+    // ===================================================
+    void Dodge(float dir)
     {
-        avoidDir = Vector2.zero;
+        speed = new Vector2(-dir * 4f, rb.linearVelocity.y);
+    }
 
-        Rigidbody2D[] objs = GameObject.FindObjectsOfType<Rigidbody2D>();
-        foreach (var obj in objs)
+    // ===================================================
+    //  プレイヤーを見失ったときの捜索行動
+    // ===================================================
+    void SearchPlayer()
+    {
+        if (!searchingPlayer) return;
+
+        float dist = Vector2.Distance(transform.position, lastKnownPlayerPos);
+
+        if (dist > 0.5f)
         {
-            foreach (var prefab in playerBulletPrefabs)
-            {
-                if (prefab == null) continue;
-
-                if (obj.gameObject.name.Contains(prefab.name))
-                {
-                    float d = Vector2.Distance(transform.position, obj.transform.position);
-                    if (d < 3f)
-                    {
-                        avoidDir = (transform.position - obj.transform.position).normalized;
-                        return true;
-                    }
-                }
-            }
-        }
-        return false;
-    }
-
-
-    // ============================================================
-    // 回避行動
-    // ============================================================
-    void PerformDodge(Vector2 dir)
-    {
-        if (Time.time < nextDodgeTime) return;
-        rb.linearVelocity = dir * 8f;
-        nextDodgeTime = Time.time + dodgeCooldown;
-    }
-
-    void PerformRandomDodge()
-    {
-        PerformDodge(Random.insideUnitCircle.normalized);
-    }
-
-
-    // ============================================================
-    // 背後取り瞬間移動
-    // ============================================================
-    void TeleportBehindPlayer()
-    {
-        if (player == null) return;
-
-        Vector3 pos = player.transform.position;
-
-        float offsetX = 1.2f;
-        if (player.transform.localScale.x > 0)
-            offsetX = -1.2f;
-
-        transform.position = pos + new Vector3(offsetX, 0, 0);
-
-        nextBehindTime = Time.time + behindTeleportCooldown;
-    }
-
-
-    // ============================================================
-    // プレイヤーへ接近
-    // ============================================================
-    void ApproachPlayer()
-    {
-        if (player == null) return;
-        Vector2 dir = (player.transform.position - transform.position).normalized;
-        speed = dir * 3f;
-    }
-
-
-    // ============================================================
-    // フェイント移動
-    // ============================================================
-    void TryFeintMovement()
-    {
-        if (Random.value < feintChance)
-        {
-            Vector2 side = new Vector2(Random.value < 0.5f ? -1 : 1, 0);
-            rb.linearVelocity = side * 3.5f;
+            float dir = (lastKnownPlayerPos.x < transform.position.x) ? -1 : 1;
+            facingLeft = (dir < 0);
+            speed = new Vector2(dir * 1.5f, rb.linearVelocity.y);
         }
         else
         {
-            ApproachPlayer();
-        }
-    }
-
-
-    // ============================================================
-    // フェイント攻撃
-    // ============================================================
-    void TryFeintAttack()
-    {
-        if (Random.value < feintChance)
-        {
-            StartCoroutine(DelayedAttack(Random.Range(attackDelayMin, attackDelayMax)));
-        }
-        else
-        {
-            ai_forceAttack = true;
-        }
-    }
-
-    IEnumerator DelayedAttack(float delay)
-    {
-        yield return new WaitForSeconds(delay);
-        ai_forceAttack = true;
-    }
-
-
-    // ============================================================
-    // 撤退AI（画面外に出ないよう制限）
-    // ============================================================
-    void RetreatFromPlayer()
-    {
-        ai_retreating = true;
-
-        Vector2 dir = (transform.position - player.transform.position).normalized;
-        Vector2 target = (Vector2)transform.position + dir * retreatDistance;
-
-        target.x = Mathf.Clamp(target.x, mapMin.x, mapMax.x);
-        target.y = Mathf.Clamp(target.y, mapMin.y, mapMax.y);
-
-        transform.position = target;
-    }
-    // ============================================================
-    // 近接攻撃ヒット処理
-    // ============================================================
-    void MakeAttackHit()
-    {
-        if (attackCheck == null) return;
-
-        Collider2D[] hits = Physics2D.OverlapCircleAll(attackCheck.position, 0.9f);
-
-        foreach (var c in hits)
-        {
-            if (c.CompareTag("Player"))
+            // 捜索フェイズ：その場で索敵
+            if (Random.value < 0.01f)
             {
-                var playerCtr = c.GetComponent<CharacterController2D>();
-                if (playerCtr != null)
-                {
-                    playerCtr.ApplyDamage(2f, transform.position);
-                }
+                float dir = Random.value < 0.5f ? -1f : 1f;
+                facingLeft = (dir < 0);
             }
+            speed = Vector2.zero;
         }
     }
-
-
-    // ============================================================
-    // 射撃攻撃
-    // ============================================================
-    void MakeShot(bool toLeft)
+    // ===================================================
+    //  Gizmos（索敵範囲・戦闘範囲・視界を可視化）
+    // ===================================================
+    void OnDrawGizmos()
     {
-        if (throwableObject == null) return;
-
-        float offset = toLeft ? -0.5f : 0.5f;
-        float bulletSpeed = toLeft ? -0.5f : 0.5f;
-
-        GameObject proj = Instantiate(
-            throwableObject,
-            transform.position + new Vector3(offset, -0.2f),
-            Quaternion.identity
-        );
-
-        var tp = proj.GetComponent<ThrowableProjectile>();
-        if (tp != null)
-        {
-            tp.owner = gameObject;
-            tp.direction = new Vector2(bulletSpeed, 0);
-        }
-    }
-
-
-    // ============================================================
-    // ダメージ処理（被弾 → ノックバック → 無敵時間）
-    // ============================================================
-    public void ApplyDamage(float damage)
-    {
-        if (isInvincible) return;
-
-        float dir = Mathf.Sign(damage);
-        damage = Mathf.Abs(damage);
-
-        animator.SetBool("Hit", true);
-        life -= damage;
-
-        rb.linearVelocity = Vector2.zero;
-        rb.AddForce(new Vector2(dir * 500f, 100f));
-
-        // ★ 新AI（Simple）が有効なら被弾回避を混ぜる
-        if (moveType == MoveType.Simple)
-        {
-            if (Random.value < 0.7f)
-            {
-                PerformRandomDodge();
-            }
-        }
-
-        if (hitCoroutine != null)
-            StopCoroutine(hitCoroutine);
-
-        hitCoroutine = StartCoroutine(HitTime());
-    }
-
-    IEnumerator HitTime()
-    {
-        isHitted = true;
-        isInvincible = true;
-
-        yield return new WaitForSeconds(0.3f);
-
-        isHitted = false;
-        isInvincible = false;
-        hitCoroutine = null;
-    }
-
-
-    // ============================================================
-    // 死亡時の当たり判定を変更
-    // ============================================================
-    void ChangeBodyHitToDead()
-    {
-        CapsuleCollider2D cc = GetComponent<CapsuleCollider2D>();
-        if (cc != null)
-        {
-            cc.size = new Vector2(1f, 0.25f);
-            cc.offset = new Vector2(0f, -0.8f);
-            cc.direction = CapsuleDirection2D.Horizontal;
-        }
-    }
-
-
-    // ============================================================
-    // Debug Gizmo（視認用）
-    // ============================================================
-    void OnDrawGizmosSelected()
-    {
-        Gizmos.color = Color.red;
-        Gizmos.DrawWireSphere(transform.position, attackRange);
-
-        Gizmos.color = Color.yellow;
+        // 索敵範囲（緑）
+        Gizmos.color = new Color(0f, 1f, 0f, 0.25f);
         Gizmos.DrawWireSphere(transform.position, detectRange);
+
+        // 戦闘範囲（赤）
+        Gizmos.color = new Color(1f, 0f, 0f, 0.25f);
+        Gizmos.DrawWireSphere(transform.position, detectRange * 0.5f);
+
+        // 吸血探索範囲（紫）
+        Gizmos.color = new Color(1f, 0f, 1f, 0.25f);
+        Gizmos.DrawWireSphere(transform.position, batSearchRange);
+
+        // 視野角（青）
+        float half = viewAngle * 0.5f;
+        Vector3 baseDir = facingLeft ? Vector3.left : Vector3.right;
+
+        Vector3 left = Quaternion.Euler(0, 0, half) * baseDir;
+        Vector3 right = Quaternion.Euler(0, 0, -half) * baseDir;
+
+        Gizmos.color = new Color(0.2f, 0.5f, 1f, 0.5f);
+        Gizmos.DrawRay(transform.position, left * detectRange);
+        Gizmos.DrawRay(transform.position, right * detectRange);
+    }
+
+    // ===================================================
+    //  LateUpdate（FSMの後にAIを動かす）
+    // ===================================================
+    void LateUpdate()
+    {
+        ProGamerAI_Update(); // 状況判断AI
+        SearchPlayer();      // 捜索AI
     }
 }
