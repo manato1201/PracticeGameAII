@@ -21,6 +21,7 @@ public class Soldier : MonoBehaviour
     [HideInInspector] public bool isHitted = false;
 
     [HideInInspector] public float maxLife = 10f;
+    private bool isAlert = false;   // 索敵状態かどうか
 
     public Vector2 position => transform.position;
 
@@ -273,29 +274,48 @@ public class Soldier : MonoBehaviour
 
     void ProGamerAI_Update()
     {
-        if (player == null) return;
+        // Player をまだ捕捉していない場合でも索敵する
+        GameObject p = GameObject.FindGameObjectWithTag("Player");
+        if (p == null)
+        {
+            NPC_Walk();
+            return;
+        }
 
         Vector2 soldierPos = transform.position;
-        Vector2 pPos = player.transform.position;
+        Vector2 pPos = p.transform.position;
         float dist = Vector2.Distance(soldierPos, pPos);
 
         // ---------------------------------------------------
-        // 1. 索敵圏外 → NPC のような通常行動
+        // 1. 索敵範囲外
         // ---------------------------------------------------
         if (dist > detectRange)
         {
-            NPC_Walk();
+            isAlert = false;
             searchingPlayer = false;
+            NPC_Walk();
             return;
         }
 
         // ---------------------------------------------------
-        // 2. プレイヤー発見（警戒状態）
+        // 2. 索敵範囲内に入った → 捜索開始
         // ---------------------------------------------------
+        isAlert = true;
+
+        // まだプレイヤーを捕捉していない場合
+        if (player == null)
+        {
+            SearchAround();   // 見回し・警戒行動
+            return;
+        }
+
+        // ---------------------------------------------------
+        // 3. プレイヤー発見
+        // ---------------------------------------------------
+        player = p;
         lastKnownPlayerPos = pPos;
         searchingPlayer = true;
 
-        // 戦闘距離（索敵の 1/2）
         float combatDist = detectRange * 0.5f;
 
         if (dist <= combatDist)
@@ -305,6 +325,29 @@ public class Soldier : MonoBehaviour
         else
         {
             ApproachPlayer(pPos);
+        }
+    }
+
+    void SearchAround()
+    {
+        // その場で周囲を警戒する挙動
+        speed = Vector2.zero;
+
+        // ランダムに向きを変える（見回し）
+        if (Random.value < 0.02f)
+        {
+            facingLeft = !facingLeft;
+        }
+
+        // 視界内に入ったら捕捉
+        GameObject p = GameObject.FindGameObjectWithTag("Player");
+        if (p == null) return;
+
+        float dist = Vector2.Distance(transform.position, p.transform.position);
+        if (dist <= detectRange)
+        {
+            player = p;
+            lastKnownPlayerPos = p.transform.position;
         }
     }
 
