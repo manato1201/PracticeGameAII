@@ -4,53 +4,85 @@ using UnityEngine;
 
 public class CameraFollow : MonoBehaviour
 {
-	public float FollowSpeed = 2f;
-	public Transform Target;
+    public float FollowSpeed = 2f;
 
-	// Transform of the camera to shake. Grabs the gameObject's transform
-	// if null.
-	private Transform camTransform;
+    // ★ Target を private にして Inspector に出さない
+    [SerializeField] private Transform Target;
 
-	// How long the object should shake for.
-	public float shakeDuration = 0f;
+    private Transform camTransform;
 
-	// Amplitude of the shake. A larger value shakes the camera harder.
-	public float shakeAmount = 0.1f;
-	public float decreaseFactor = 1.0f;
+    // Camera shake params
+    public float shakeDuration = 0f;
+    public float shakeAmount = 0.1f;
+    public float decreaseFactor = 1.0f;
 
-	Vector3 originalPos;
+    Vector3 originalPos;
 
-	void Awake()
-	{
-		Cursor.visible = false;
-		if (camTransform == null)
-		{
-			camTransform = GetComponent(typeof(Transform)) as Transform;
-		}
-	}
+    void Awake()
+    {
+        Cursor.visible = false;
 
-	void OnEnable()
-	{
-		originalPos = camTransform.localPosition;
-	}
+        if (camTransform == null)
+            camTransform = GetComponent(typeof(Transform)) as Transform;
+    }
 
-	private void Update()
-	{
-		Vector3 newPosition = Target.position;
-		newPosition.z = -10;
-		transform.position = Vector3.Slerp(transform.position, newPosition, FollowSpeed * Time.deltaTime);
+    void Start()
+    {
+        // ★ Target が未設定の場合、自動で Player を探す
+        if (Target == null)
+        {
+            GameObject p = GameObject.FindGameObjectWithTag("Player");
+            if (p != null)
+            {
+                Target = p.transform;
+            }
+        }
+    }
 
-		if (shakeDuration > 0)
-		{
-			camTransform.localPosition = originalPos + Random.insideUnitSphere * shakeAmount;
+    void OnEnable()
+    {
+        originalPos = camTransform.localPosition;
+    }
 
-			shakeDuration -= Time.deltaTime * decreaseFactor;
-		}
-	}
+    private void Update()
+    {
+        // ★ Target が存在しない場合は毎フレーム探索（エラー防止）
+        if (Target == null)
+        {
+            GameObject p = GameObject.FindGameObjectWithTag("Player");
+            if (p != null)
+            {
+                Target = p.transform;
+            }
+            else
+            {
+                // Player がまだ生成されていない場合は何もせず return
+                return;
+            }
+        }
 
-	public void ShakeCamera()
-	{
-		originalPos = camTransform.localPosition;
-		shakeDuration = 0.2f;
-	}
+        // ===== カメラ追従 =====
+        Vector3 newPosition = Target.position;
+        newPosition.z = -10;
+
+        transform.position = Vector3.Slerp(
+            transform.position,
+            newPosition,
+            FollowSpeed * Time.deltaTime
+        );
+
+        // ===== カメラシェイク =====
+        if (shakeDuration > 0)
+        {
+            camTransform.localPosition = originalPos + Random.insideUnitSphere * shakeAmount;
+            shakeDuration -= Time.deltaTime * decreaseFactor;
+        }
+    }
+
+    // 外部から ShakeCamera() を呼べるように維持
+    public void ShakeCamera()
+    {
+        originalPos = camTransform.localPosition;
+        shakeDuration = 0.2f;
+    }
 }
