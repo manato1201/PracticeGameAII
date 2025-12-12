@@ -241,6 +241,18 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4273834578559770477, guid: f7dc6f07cc6c9f94c9aed2d9a56e5577, type: 3}
+      propertyPath: life
+      value: 20
+      objectReference: {fileID: 0}
+    - target: {fileID: 4273834578559770477, guid: f7dc6f07cc6c9f94c9aed2d9a56e5577, type: 3}
+      propertyPath: playerTag
+      value: Player
+      objectReference: {fileID: 0}
+    - target: {fileID: 4273834578559770477, guid: f7dc6f07cc6c9f94c9aed2d9a56e5577, type: 3}
+      propertyPath: enragedMoveSpeed
+      value: 4
+      objectReference: {fileID: 0}
     - target: {fileID: 6138881915862801924, guid: f7dc6f07cc6c9f94c9aed2d9a56e5577, type: 3}
       propertyPath: m_Name
       value: Kinoko (3)
@@ -1194,6 +1206,9 @@ MonoBehaviour:
   retreatDuration: 3
   chargeWaveDuration: 2.5
   surroundDistance: 8
+  searchDistanceFactor: 1.5
+  searchWanderStrength: 0.5
+  searchAntiCohesion: 0.02
   flockState: 0
 --- !u!114 &735256894
 MonoBehaviour:
@@ -1212,6 +1227,16 @@ MonoBehaviour:
   chargeDelay: 3
   maxChargeDuration: 2
   chargeTimer: 0
+  cohesionFactor: 1
+  separationFactor: 1
+  alignmentFactor: 1
+  leaderFactor: 1
+  protectFactor: 1
+  speedFactor: 1
+  randomnessFactor: 1
+  reactionLerp: 5
+  skill: 0.5
+  role: 0
 --- !u!4 &735256895
 Transform:
   m_ObjectHideFlags: 0
@@ -1820,6 +1845,18 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4273834578559770477, guid: f7dc6f07cc6c9f94c9aed2d9a56e5577, type: 3}
+      propertyPath: life
+      value: 20
+      objectReference: {fileID: 0}
+    - target: {fileID: 4273834578559770477, guid: f7dc6f07cc6c9f94c9aed2d9a56e5577, type: 3}
+      propertyPath: playerTag
+      value: Player
+      objectReference: {fileID: 0}
+    - target: {fileID: 4273834578559770477, guid: f7dc6f07cc6c9f94c9aed2d9a56e5577, type: 3}
+      propertyPath: enragedMoveSpeed
+      value: 4
+      objectReference: {fileID: 0}
     - target: {fileID: 6138881915862801924, guid: f7dc6f07cc6c9f94c9aed2d9a56e5577, type: 3}
       propertyPath: m_Name
       value: Kinoko (2)
@@ -2138,6 +2175,18 @@ PrefabInstance:
     - target: {fileID: 2185606431432828651, guid: f7dc6f07cc6c9f94c9aed2d9a56e5577, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4273834578559770477, guid: f7dc6f07cc6c9f94c9aed2d9a56e5577, type: 3}
+      propertyPath: life
+      value: 20
+      objectReference: {fileID: 0}
+    - target: {fileID: 4273834578559770477, guid: f7dc6f07cc6c9f94c9aed2d9a56e5577, type: 3}
+      propertyPath: playerTag
+      value: Player
+      objectReference: {fileID: 0}
+    - target: {fileID: 4273834578559770477, guid: f7dc6f07cc6c9f94c9aed2d9a56e5577, type: 3}
+      propertyPath: enragedMoveSpeed
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 6138881915862801924, guid: f7dc6f07cc6c9f94c9aed2d9a56e5577, type: 3}
       propertyPath: m_Name
@@ -3208,11 +3257,11 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 2185606431432828651, guid: f7dc6f07cc6c9f94c9aed2d9a56e5577, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 1.4
+      value: -2.46
       objectReference: {fileID: 0}
     - target: {fileID: 2185606431432828651, guid: f7dc6f07cc6c9f94c9aed2d9a56e5577, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 3.01
+      value: 2.95
       objectReference: {fileID: 0}
     - target: {fileID: 2185606431432828651, guid: f7dc6f07cc6c9f94c9aed2d9a56e5577, type: 3}
       propertyPath: m_LocalPosition.z
@@ -3246,9 +3295,29 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4273834578559770477, guid: f7dc6f07cc6c9f94c9aed2d9a56e5577, type: 3}
+      propertyPath: life
+      value: 20
+      objectReference: {fileID: 0}
+    - target: {fileID: 4273834578559770477, guid: f7dc6f07cc6c9f94c9aed2d9a56e5577, type: 3}
+      propertyPath: playerTag
+      value: Player
+      objectReference: {fileID: 0}
+    - target: {fileID: 4273834578559770477, guid: f7dc6f07cc6c9f94c9aed2d9a56e5577, type: 3}
+      propertyPath: enragedHpRatio
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4273834578559770477, guid: f7dc6f07cc6c9f94c9aed2d9a56e5577, type: 3}
+      propertyPath: enragedMoveSpeed
+      value: 4
+      objectReference: {fileID: 0}
     - target: {fileID: 6138881915862801924, guid: f7dc6f07cc6c9f94c9aed2d9a56e5577, type: 3}
       propertyPath: m_Name
       value: Kinoko
+      objectReference: {fileID: 0}
+    - target: {fileID: 6138881915862801924, guid: f7dc6f07cc6c9f94c9aed2d9a56e5577, type: 3}
+      propertyPath: m_TagString
+      value: Enemy
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

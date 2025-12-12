@@ -158,6 +158,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   playerTag: Player
+  enemyTag: Enemy
   animator: {fileID: 1103101238447686663}
   rb: {fileID: 4353736694451582978}
   idleDuration: 1.4
@@ -173,9 +174,12 @@ MonoBehaviour:
   attackRangeForDamage: 2.5
   attackDamage: 10
   AttackPoint: {fileID: 8529834437656196583}
-  life: 100
+  maxLife: 100
+  life: 20
   isInvincible: 0
   isHitted: 0
+  enragedHpRatio: 0.5
+  enragedMoveSpeed: 8
 --- !u!50 &4353736694451582978
 Rigidbody2D:
   serializedVersion: 5
