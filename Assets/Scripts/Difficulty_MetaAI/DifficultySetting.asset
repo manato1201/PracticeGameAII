@@ -16,18 +16,18 @@ MonoBehaviour:
   - label: Easy
     hpMultiplier: 0.5
     speedMultiplier: 0.5
-    attackWaitMultiplier: 0
+    attackWaitMultiplier: 3
     feintChance: 0
     detectionRadius: 0
   - label: Normal
     hpMultiplier: 1
-    speedMultiplier: 3
-    attackWaitMultiplier: 0.25
+    speedMultiplier: 1
+    attackWaitMultiplier: 1
     feintChance: 0
     detectionRadius: 0
   - label: Hard
     hpMultiplier: 5
-    speedMultiplier: 10
+    speedMultiplier: 5
     attackWaitMultiplier: 0.5
     feintChance: 0
     detectionRadius: 0

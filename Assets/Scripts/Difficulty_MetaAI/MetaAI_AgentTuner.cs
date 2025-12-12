@@ -1,5 +1,5 @@
 using UnityEngine;
-using UnityEngine.AI; // SoldierのNavMeshAgent用
+using UnityEngine.AI;
 
 public class MetaAI_AgentTuner : MonoBehaviour
 {
@@ -10,17 +10,16 @@ public class MetaAI_AgentTuner : MonoBehaviour
     private EnemyAI _mushroom;
 
     // --- 初期値キャッシュ ---
-    // Soldier用
-    private float _baseSoldierLife;
-    private float _baseSoldierDelayMin;
-    private float _baseSoldierDelayMax;
-    private float _baseSoldierSpeed;
 
-    // Bat用 (ここが増えました)
+    // Soldier用 (HPと索敵範囲のみ)
+    private float _baseSoldierLife;
+    private float _baseSoldierDetectRange;
+
+    // Bat用
     private float _baseBatLife;
-    private float _baseBatChaseSpeed;  // 追跡
-    private float _baseBatRoamSpeed;   // 徘徊
-    private float _baseBatSearchSpeed; // 捜索
+    private float _baseBatChaseSpeed;
+    private float _baseBatRoamSpeed;
+    private float _baseBatSearchSpeed;
 
     // Boid用
     private float _baseBoidSpeed;
@@ -70,20 +69,19 @@ public class MetaAI_AgentTuner : MonoBehaviour
         if (_soldier != null)
         {
             _baseSoldierLife = _soldier.life;
-            _baseSoldierDelayMin = _soldier.attackDelayMin;
-            _baseSoldierDelayMax = _soldier.attackDelayMax;
+            // Soldier.cs にもともとある detectRange (索敵範囲) は public なので操作可能
+            _baseSoldierDetectRange = _soldier.detectRange;
 
-            var agent = _soldier.GetComponent<NavMeshAgent>();
-            if (agent != null) _baseSoldierSpeed = agent.speed;
+            Debug.Log($"[MetaAI] Soldier Base Stats: Life={_baseSoldierLife}, Range={_baseSoldierDetectRange}");
         }
 
-        // --- Bat (3つのスピードを保存) ---
+        // --- Bat ---
         if (_bat != null)
         {
             _baseBatLife = _bat.life;
-            _baseBatChaseSpeed = _bat.chaseSpeed;      // 追跡用
-            _baseBatRoamSpeed = _bat.roamSpeed;       // 徘徊用
-            _baseBatSearchSpeed = _bat.searchMoveSpeed; // 捜索用
+            _baseBatChaseSpeed = _bat.chaseSpeed;
+            _baseBatRoamSpeed = _bat.roamSpeed;
+            _baseBatSearchSpeed = _bat.searchMoveSpeed;
         }
 
         // --- Boid ---
@@ -109,48 +107,40 @@ public class MetaAI_AgentTuner : MonoBehaviour
     {
         if (!_isInitialized) SaveBaseStats();
 
-        // --- Soldier ---
+        // --- Soldier の更新 ---
         if (_soldier != null)
         {
+            // 1. HPの強化 (これは可能)
             float newMaxLife = _baseSoldierLife * param.hpMultiplier;
             _soldier.maxLife = newMaxLife;
             _soldier.life = newMaxLife;
-            _soldier.attackDelayMin = _baseSoldierDelayMin * param.attackWaitMultiplier;
-            _soldier.attackDelayMax = _baseSoldierDelayMax * param.attackWaitMultiplier;
-            _soldier.feintChance = param.feintChance;
 
-            var agent = _soldier.GetComponent<NavMeshAgent>();
-            if (agent != null)
-            {
-                agent.speed = _baseSoldierSpeed * param.speedMultiplier;
-            }
+            // 2. 索敵範囲の強化 (これも可能)
+            // detectionRadius というパラメータがあればそれを使う
+            _soldier.detectRange = param.detectionRadius > 0 ? param.detectionRadius : _baseSoldierDetectRange;
+
+            // ※注意: Soldier.csには速度や攻撃頻度の変数がないため、ここでは変更できません。
+            // 速度を変えたい場合は、Soldier.csの修正が必須となります。
         }
 
-        // --- Bat ---
+        // --- Bat の更新 ---
         if (_bat != null)
         {
             _bat.life = _baseBatLife * param.hpMultiplier;
-
-            // 1. 追いかける速度
             _bat.chaseSpeed = _baseBatChaseSpeed * param.speedMultiplier;
-            // 2. うろうろする速度
             _bat.roamSpeed = _baseBatRoamSpeed * param.speedMultiplier;
-            // 3. 探す速度
             _bat.searchMoveSpeed = _baseBatSearchSpeed * param.speedMultiplier;
-
             _bat.detectionRadius = param.detectionRadius;
-
-            // Debug.Log($"[MetaAI] Bat Speed Update: Chase={_bat.chaseSpeed}, Roam={_bat.roamSpeed}");
         }
 
-        // --- Boid ---
+        // --- Boid の更新 ---
         if (_boid != null)
         {
             _boid.speedFactor = _baseBoidSpeed * param.speedMultiplier;
             _boid.reactionLerp = _baseBoidLerp * param.speedMultiplier;
         }
 
-        // --- Mushroom ---
+        // --- Mushroom の更新 ---
         if (_mushroom != null)
         {
             _mushroom.life = _baseMushroomLife * param.hpMultiplier;
