@@ -1,9 +1,11 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 
 public class Attack : MonoBehaviour
 {
+
     public float dmgValue = 1;
     public GameObject throwableObject;
     public Transform attackCheck;
@@ -30,15 +32,35 @@ public class Attack : MonoBehaviour
     public GameObject skill1EffectPrefab;
     public GameObject cam;
 
+    public bool[] HasSkill;
+    public GameObject[] SkillObject;
+
     private void Awake()
     {
+        HasSkill = new bool[] { false, false, false, false };
         m_Rigidbody2D = GetComponent<Rigidbody2D>();
         playerMovement = GetComponent<CharacterController2D>();
     }
 
-    void Start()
+    public void GetSkill1()
     {
-
+        HasSkill[0] = true;
+        SkillObject[0].SetActive(false);
+    }
+    public void GetSkill2()
+    {
+        HasSkill[1] = true;
+        SkillObject[1].SetActive(false);
+    }
+    public void GetSkill3()
+    {
+        HasSkill[2] = true;
+        SkillObject[2].SetActive(false);
+    }
+    public void GetSkill4()
+    {
+        HasSkill[3] = true;
+        SkillObject[3].SetActive(false);
     }
 
     void Update()
@@ -52,49 +74,61 @@ public class Attack : MonoBehaviour
 
         if (Input.GetButtonDown("Skill1") && canAttack)
         {
-            if (playerMovement.mp >= 30)
+            if (HasSkill[0])
             {
-                canAttack = false;
-                animator.SetBool("Skill1", true);
-                StartCoroutine(AttackCooldown(0.5f, "Skill1"));
-                Skill1Logic();
-                playerMovement.decreaseMP(20);
+                if (playerMovement.mp >= 30)
+                {
+                    canAttack = false;
+                    animator.SetBool("Skill1", true);
+                    StartCoroutine(AttackCooldown(0.5f, "Skill1"));
+                    Skill1Logic();
+                    playerMovement.decreaseMP(20);
+                }
             }
         }
 
         if (Input.GetButtonDown("Skill2") && canAttack)
         {
-            if (playerMovement.mp >= 30)
+            if (HasSkill[1])
             {
-                canAttack = false;
-                animator.SetBool("Skill2", true);
-                StartCoroutine(AttackCooldown(0.7f, "Skill2"));
-                Skill2Logic();
-                playerMovement.decreaseMP(30);
+                if (playerMovement.mp >= 30)
+                {
+                    canAttack = false;
+                    animator.SetBool("Skill2", true);
+                    StartCoroutine(AttackCooldown(0.7f, "Skill2"));
+                    Skill2Logic();
+                    playerMovement.decreaseMP(30);
+                }
             }
         }
 
         if (Input.GetButtonDown("Skill3") && canAttack)
         {
-            if (playerMovement.mp >= 30)
+            if (HasSkill[2])
             {
-                canAttack = false;
-                animator.SetBool("Skill3", true);
-                StartCoroutine(AttackCooldown(1.0f, "Skill3"));
-                Skill3Logic();
-                playerMovement.decreaseMP(30);
+                if (playerMovement.mp >= 30)
+                {
+                    canAttack = false;
+                    animator.SetBool("Skill3", true);
+                    StartCoroutine(AttackCooldown(1.0f, "Skill3"));
+                    Skill3Logic();
+                    playerMovement.decreaseMP(30);
+                }
             }
         }
 
         if (Input.GetButtonDown("Skill4") && canAttack)
         {
-            if (playerMovement.mp >= 80)
+            if (HasSkill[3])
             {
-                canAttack = false;
-                animator.SetBool("Skill4", true);
-                StartCoroutine(AttackCooldown(1.0f, "Skill4"));
-                Skill4Logic();
-                playerMovement.decreaseMP(80);
+                if (playerMovement.mp >= 80)
+                {
+                    canAttack = false;
+                    animator.SetBool("Skill4", true);
+                    StartCoroutine(AttackCooldown(1.0f, "Skill4"));
+                    Skill4Logic();
+                    playerMovement.decreaseMP(80);
+                }
             }
         }
     }
