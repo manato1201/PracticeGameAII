@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections.Generic;
+using System;
 
 public class VoiceRecorder : MonoBehaviour
 {
@@ -31,6 +32,9 @@ public class VoiceRecorder : MonoBehaviour
 
     // 一時バッファ再利用用
     private float[] _tempBuffer;
+
+    public event Action OnVoiceStart;
+    public event Action<AudioClip> OnVoiceEnd;
 
     void Start()
     {
@@ -118,6 +122,7 @@ public class VoiceRecorder : MonoBehaviour
                 if (level >= startThreshold)
                 {
                     StartSegment(s);
+
                 }
                 // 何もしないときはスルー
             }
@@ -141,6 +146,7 @@ public class VoiceRecorder : MonoBehaviour
         _currentSegment.Add(firstSample);
         _currentVoiceTime += 1f / sampleRate;
         // Debug.Log("Voice Start");
+        OnVoiceStart?.Invoke();
     }
 
     private void EndSegment()
@@ -169,6 +175,7 @@ public class VoiceRecorder : MonoBehaviour
         segment.SetData(data, 0);
 
         recordedSegments.Add(segment);
+        OnVoiceEnd?.Invoke(segment);
         if (recordedSegments.Count > maxSegments)
         {
             Destroy(recordedSegments[0]);
